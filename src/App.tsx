@@ -60,19 +60,17 @@ export default function App() {
   const [exportHistory, setExportHistory] = useState<ExportHistoryItem[]>([]);
   const [statusBanner, setStatusBanner] = useState<string>('');
 
-  // Load initial sample bundle on first mount so journeys work out-of-the-box
   const handleLoadSampleBundle = useCallback(async () => {
     const sampleItems = await createSampleBundle();
     setItems(sampleItems);
     setSelectedItemId(sampleItems[0]?.id ?? null);
-    setStatusBanner('Loaded 4 sample files (PDF + JPG + PNG + Markdown) into queue.');
+    setStatusBanner('Loaded 4 sample files into queue.');
   }, []);
 
   useEffect(() => {
     handleLoadSampleBundle();
   }, [handleLoadSampleBundle]);
 
-  // Re-render live preview pages whenever queue or settings change
   useEffect(() => {
     let cancelled = false;
     if (items.length === 0) {
@@ -193,7 +191,7 @@ export default function App() {
       ...prev,
       ...preset.settings,
     }));
-    setStatusBanner(`Applied "${preset.name}" preset configuration.`);
+    setStatusBanner(`Applied "${preset.name}" preset.`);
   }, []);
 
   const handleExecuteMerge = useCallback(async () => {
@@ -227,8 +225,8 @@ export default function App() {
   }, [items, settings, isMerging]);
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F8FAFC] text-slate-900">
-      {/* Strict 3-Zone Top Bar */}
+    <div className="min-h-screen flex flex-col bg-[#F4F4F5] text-zinc-900">
+      {/* 3-Zone Top Bar */}
       <TopBar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
@@ -238,63 +236,47 @@ export default function App() {
         fileCount={items.length}
       />
 
-      {/* Main Desktop Workspace Viewport */}
-      <main className="flex-1 max-w-[1440px] w-full mx-auto px-6 py-6 space-y-6">
-        {/* Summary Metrics Strip */}
-        <section
-          aria-label="Workspace Summary Metrics"
-          className="grid grid-cols-2 lg:grid-cols-4 gap-4"
-        >
-          <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <p className="text-xs font-medium text-slate-500">Queued Source Files</p>
-            <p className="text-2xl font-bold text-slate-900 font-mono tabular-nums mt-1">
-              {metrics.totalFiles}
-            </p>
-            <p className="text-xs text-slate-500 font-mono tabular-nums mt-1">
-              {metrics.categoryCounts.pdf} PDF · {metrics.categoryCounts.image} IMG ·{' '}
+      {/* Compact Desktop Summary Strip (replaces bloated SaaS KPI cards) */}
+      <div
+        role="region"
+        aria-label="Workspace Summary Metrics"
+        className="bg-white border-b border-zinc-200"
+      >
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-600 font-mono tabular-nums">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="font-semibold text-zinc-900">
+              {metrics.totalFiles} {metrics.totalFiles === 1 ? 'File' : 'Files'}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>
+              {metrics.categoryCounts.pdf} PDF, {metrics.categoryCounts.image} IMG,{' '}
               {metrics.categoryCounts.text} TXT
-            </p>
-          </div>
-
-          <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <p className="text-xs font-medium text-slate-500">Compiled Sheet Count</p>
-            <p className="text-2xl font-bold text-slate-900 font-mono tabular-nums mt-1">
+            </span>
+            <span aria-hidden="true">·</span>
+            <span className="font-semibold text-zinc-900">
               {settings.outputFormat === 'stitched-png' ||
               settings.outputFormat === 'stitched-jpeg'
-                ? '1 Continuous'
-                : `${metrics.totalSelectedPages} Pages`}
-            </p>
-            <p className="text-xs text-slate-500 mt-1">
-              {settings.includeTableOfContents
-                ? 'Includes Table of Contents cover'
-                : 'Direct sequential page stream'}
-            </p>
+                ? '1 Continuous Strip'
+                : `${metrics.totalSelectedPages} Output Sheets`}
+            </span>
+            <span aria-hidden="true">·</span>
+            <span>{formatFileSize(metrics.totalSizeBytes)}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              Target: {settings.outputFormat.toUpperCase()} ({settings.pageSize.toUpperCase()})
+            </span>
           </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <p className="text-xs font-medium text-slate-500">Combined Input Payload</p>
-            <p className="text-2xl font-bold text-slate-900 font-mono tabular-nums mt-1">
-              {formatFileSize(metrics.totalSizeBytes)}
-            </p>
-            <p className="text-xs text-slate-500 mt-1">
-              100% local client-side compilation
-            </p>
-          </div>
+          <span className="font-sans text-zinc-500 truncate max-w-md">
+            {statusBanner || 'Ready to combine documents and images'}
+          </span>
+        </div>
+      </div>
 
-          <div className="bg-white border border-slate-200 rounded-xl p-4">
-            <p className="text-xs font-medium text-slate-500">Target Output Specification</p>
-            <p className="text-lg font-bold text-slate-900 font-mono tabular-nums mt-1 truncate">
-              {settings.outputFormat.toUpperCase()} · {settings.pageSize.toUpperCase()}
-            </p>
-            <p className="text-xs text-slate-500 mt-1 truncate">
-              {statusBanner || 'Ready to combine documents and images'}
-            </p>
-          </div>
-        </section>
-
-        {/* Active Tab Router */}
+      {/* Main Desktop Workspace Viewport */}
+      <main className="flex-1 max-w-[1440px] w-full mx-auto px-4 sm:px-5 py-4">
         {activeTab === 'workspace' && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
             <div className="lg:col-span-8">
               <FileQueuePanel
                 items={items}
@@ -342,14 +324,14 @@ export default function App() {
         {activeTab === 'composer' && (
           <section
             aria-label="Visual Page Composer and Sheet Lightbox"
-            className="bg-white border border-slate-200 rounded-xl p-6 space-y-6"
+            className="bg-white border border-zinc-200 rounded-lg p-5 space-y-4"
           >
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-3.5">
               <div>
-                <h1 className="text-lg font-bold text-slate-900">
+                <h1 className="text-sm font-bold text-zinc-900">
                   Visual Page Composer & Sheet Lightbox
                 </h1>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-zinc-500 mt-0.5">
                   Inspect all {previewPages.length} compiled output sheets side-by-side and fine-tune item orientation or order before exporting.
                 </p>
               </div>
@@ -357,7 +339,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={() => setIsNoteModalOpen(true)}
-                  className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded cursor-pointer"
                 >
                   <FilePlus2 className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>Insert Text Page</span>
@@ -366,7 +348,7 @@ export default function App() {
                   type="button"
                   onClick={handleExecuteMerge}
                   disabled={items.length === 0 || isMerging}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg cursor-pointer disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 rounded cursor-pointer disabled:opacity-40"
                 >
                   <Download className="w-3.5 h-3.5" aria-hidden="true" />
                   <span>Export Unified File</span>
@@ -375,56 +357,56 @@ export default function App() {
             </div>
 
             {items.length === 0 ? (
-              <div className="py-16 text-center">
-                <Layers className="w-8 h-8 text-slate-400 mx-auto mb-2" aria-hidden="true" />
-                <p className="text-sm font-medium text-slate-700">
+              <div className="py-12 text-center">
+                <Layers className="w-7 h-7 text-zinc-400 mx-auto mb-2" aria-hidden="true" />
+                <p className="text-xs font-medium text-zinc-700">
                   No files in the composer queue
                 </p>
                 <button
                   type="button"
                   onClick={handleLoadSampleBundle}
-                  className="mt-3 px-4 py-2 text-xs font-semibold text-white bg-slate-900 rounded-lg cursor-pointer"
+                  className="mt-3 px-3.5 py-1.5 text-xs font-semibold text-white bg-zinc-900 rounded cursor-pointer"
                 >
                   Load Sample Bundle
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {items.map((item, idx) => {
                   const selectedPages = parsePageRange(item.pageRange, item.pageCount);
                   return (
                     <div
                       key={item.id}
-                      className="border border-slate-200 rounded-lg overflow-hidden flex flex-col bg-slate-50/50"
+                      className="border border-zinc-200 rounded-md overflow-hidden flex flex-col bg-zinc-50/50"
                     >
-                      <div className="h-56 bg-slate-100 border-b border-slate-200 flex items-center justify-center p-4 overflow-hidden">
+                      <div className="h-44 bg-zinc-100 border-b border-zinc-200 flex items-center justify-center p-3 overflow-hidden">
                         <img
                           src={item.thumbnailDataUrl}
                           alt={`Sheet preview for ${item.name}`}
                           referrerPolicy="no-referrer"
                           style={{ transform: `rotate(${item.rotation}deg)` }}
-                          className="max-h-full max-w-full object-contain bg-white shadow-xs transition-transform duration-150"
+                          className="max-h-full max-w-full object-contain bg-white shadow-2xs transition-transform duration-150"
                         />
                       </div>
-                      <div className="p-3.5 flex-1 flex flex-col justify-between gap-3 bg-white">
+                      <div className="p-3 flex-1 flex flex-col justify-between gap-2.5 bg-white">
                         <div>
-                          <p className="text-xs font-mono text-slate-500 tabular-nums">
+                          <p className="text-[11px] font-mono text-zinc-500 tabular-nums">
                             Sequence #{String(idx + 1).padStart(2, '0')} · {item.extension} ·{' '}
                             {selectedPages.length}p
                           </p>
-                          <p className="text-sm font-semibold text-slate-900 truncate mt-0.5">
+                          <p className="text-xs font-semibold text-zinc-900 truncate mt-0.5">
                             {item.name}
                           </p>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                          <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
+                          <div className="flex items-center gap-0.5">
                             <button
                               type="button"
                               onClick={() => handleMoveItem(idx, 'up')}
                               disabled={idx <= 0}
                               aria-label={`Move '${item.name}' earlier`}
-                              className="p-1.5 text-slate-600 hover:text-slate-900 disabled:opacity-30 rounded cursor-pointer"
+                              className="p-1 text-zinc-600 hover:text-zinc-900 disabled:opacity-30 rounded cursor-pointer"
                             >
                               <ArrowUp className="w-3.5 h-3.5" />
                             </button>
@@ -433,7 +415,7 @@ export default function App() {
                               onClick={() => handleMoveItem(idx, 'down')}
                               disabled={idx >= items.length - 1}
                               aria-label={`Move '${item.name}' later`}
-                              className="p-1.5 text-slate-600 hover:text-slate-900 disabled:opacity-30 rounded cursor-pointer"
+                              className="p-1 text-zinc-600 hover:text-zinc-900 disabled:opacity-30 rounded cursor-pointer"
                             >
                               <ArrowDown className="w-3.5 h-3.5" />
                             </button>
@@ -441,7 +423,7 @@ export default function App() {
                               type="button"
                               onClick={() => handleRotateItem(item.id)}
                               aria-label={`Rotate '${item.name}' 90 degrees`}
-                              className="p-1.5 text-slate-600 hover:text-slate-900 rounded cursor-pointer"
+                              className="p-1 text-zinc-600 hover:text-zinc-900 rounded cursor-pointer"
                             >
                               <RotateCw className="w-3.5 h-3.5" />
                             </button>
@@ -450,7 +432,7 @@ export default function App() {
                             type="button"
                             onClick={() => handleRemoveItem(item.id)}
                             aria-label={`Remove '${item.name}'`}
-                            className="p-1.5 text-red-600 hover:bg-red-50 rounded cursor-pointer"
+                            className="p-1 text-red-600 hover:bg-red-50 rounded cursor-pointer"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -467,32 +449,32 @@ export default function App() {
         {activeTab === 'presets' && (
           <section
             aria-label="Document Conversion Presets"
-            className="bg-white border border-slate-200 rounded-xl p-6 space-y-6"
+            className="bg-white border border-zinc-200 rounded-lg p-5 space-y-4"
           >
-            <div className="border-b border-slate-200 pb-4">
-              <h1 className="text-lg font-bold text-slate-900">
+            <div className="border-b border-zinc-200 pb-3.5">
+              <h1 className="text-sm font-bold text-zinc-900">
                 One-Click Conversion & Packaging Presets
               </h1>
-              <p className="text-xs text-slate-500 mt-0.5">
+              <p className="text-xs text-zinc-500 mt-0.5">
                 Select a domain workflow profile to configure target format, page geometry, margins, cover index, and watermarks automatically.
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {WORKSPACE_PRESETS.map((preset, idx) => {
                 const isSelected = activePresetId === preset.id;
                 return (
                   <div
                     key={preset.id}
-                    className={`flex flex-col justify-between p-5 border rounded-xl transition-colors ${
+                    className={`flex flex-col justify-between p-4 border rounded-lg transition-colors ${
                       isSelected
-                        ? 'border-slate-900 bg-slate-50/80'
-                        : 'border-slate-200 hover:border-slate-300 bg-white'
+                        ? 'border-zinc-900 bg-zinc-50/80'
+                        : 'border-zinc-200 hover:border-zinc-300 bg-white'
                     }`}
                   >
                     <div>
                       <div className="flex items-center justify-between gap-2">
-                        <span className="font-mono text-xs font-semibold text-slate-500 tabular-nums">
+                        <span className="font-mono text-xs font-semibold text-zinc-500 tabular-nums">
                           0{idx + 1}. {preset.settings.outputFormat?.toUpperCase() || 'PDF'}
                         </span>
                         {isSelected && (
@@ -502,25 +484,25 @@ export default function App() {
                           </span>
                         )}
                       </div>
-                      <h2 className="text-base font-bold text-slate-900 mt-1.5">
+                      <h2 className="text-sm font-bold text-zinc-900 mt-1">
                         {preset.name}
                       </h2>
-                      <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">
+                      <p className="text-xs text-zinc-600 mt-1 leading-relaxed">
                         {preset.description}
                       </p>
-                      <p className="text-xs font-mono text-slate-500 mt-3">
+                      <p className="text-[11px] font-mono text-zinc-500 mt-2.5">
                         Best for: {preset.targetUse}
                       </p>
                     </div>
 
-                    <div className="mt-5 pt-3 border-t border-slate-200/80 flex items-center justify-between">
+                    <div className="mt-4 pt-2.5 border-t border-zinc-200/80 flex items-center justify-between">
                       <button
                         type="button"
                         onClick={() => {
                           handleApplyPreset(preset);
                           setActiveTab('workspace');
                         }}
-                        className="w-full py-2 px-3 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
+                        className="w-full py-1.5 px-3 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 rounded transition-colors cursor-pointer"
                       >
                         Apply Preset & Open Workspace
                       </button>
@@ -535,14 +517,14 @@ export default function App() {
         {activeTab === 'history' && (
           <section
             aria-label="Session Export History"
-            className="bg-white border border-slate-200 rounded-xl p-6 space-y-5"
+            className="bg-white border border-zinc-200 rounded-lg p-5 space-y-4"
           >
-            <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-3.5">
               <div>
-                <h1 className="text-lg font-bold text-slate-900">
+                <h1 className="text-sm font-bold text-zinc-900">
                   Compiled Document Export History
                 </h1>
-                <p className="text-xs text-slate-500 mt-0.5">
+                <p className="text-xs text-zinc-500 mt-0.5">
                   Re-download or inspect any unified PDF, stitched image, or ZIP bundle compiled during this session.
                 </p>
               </div>
@@ -550,7 +532,7 @@ export default function App() {
                 <button
                   type="button"
                   onClick={handleExecuteMerge}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg cursor-pointer"
+                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 rounded cursor-pointer"
                 >
                   Compile Current Queue Now
                 </button>
@@ -558,27 +540,27 @@ export default function App() {
             </div>
 
             {exportHistory.length === 0 ? (
-              <div className="py-14 text-center">
-                <FolderOpen className="w-8 h-8 text-slate-400 mx-auto mb-2" aria-hidden="true" />
-                <p className="text-sm font-semibold text-slate-800">
+              <div className="py-10 text-center">
+                <FolderOpen className="w-7 h-7 text-zinc-400 mx-auto mb-2" aria-hidden="true" />
+                <p className="text-xs font-semibold text-zinc-800">
                   No compiled exports yet
                 </p>
-                <p className="text-xs text-slate-500 mt-1">
+                <p className="text-xs text-zinc-500 mt-1">
                   Click "Merge Files" in the top bar or workspace inspector to generate your first unified output file.
                 </p>
               </div>
             ) : (
-              <div className="divide-y divide-slate-200">
+              <div className="divide-y divide-zinc-200">
                 {exportHistory.map((exp) => (
                   <div
                     key={exp.id}
-                    className="py-4 flex flex-wrap items-center justify-between gap-4"
+                    className="py-3 flex flex-wrap items-center justify-between gap-3"
                   >
                     <div>
-                      <p className="text-sm font-bold text-slate-900 font-mono">
+                      <p className="text-xs font-bold text-zinc-900 font-mono">
                         {exp.filename}
                       </p>
-                      <p className="text-xs text-slate-500 font-mono tabular-nums mt-0.5">
+                      <p className="text-[11px] text-zinc-500 font-mono tabular-nums mt-0.5">
                         {exp.outputFormat.toUpperCase()} · {exp.totalFiles} source files ·{' '}
                         {exp.totalPages} {exp.totalPages === 1 ? 'page' : 'pages'} ·{' '}
                         {formatFileSize(exp.sizeBytes)} · Compiled at {exp.createdAt}
@@ -589,17 +571,17 @@ export default function App() {
                       <button
                         type="button"
                         onClick={() => setLatestExportResult(exp)}
-                        className="px-3 py-1.5 text-xs font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg cursor-pointer"
+                        className="px-2.5 py-1 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded cursor-pointer"
                       >
-                        Inspect Sheets
+                        Inspect
                       </button>
                       <a
                         href={exp.downloadUrl}
                         download={exp.filename}
-                        className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-slate-900 hover:bg-slate-800 rounded-lg"
+                        className="inline-flex items-center gap-1.5 px-3 py-1 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 rounded"
                       >
                         <Download className="w-3.5 h-3.5" aria-hidden="true" />
-                        <span>Download</span>
+                        <span>Save File</span>
                       </a>
                     </div>
                   </div>
