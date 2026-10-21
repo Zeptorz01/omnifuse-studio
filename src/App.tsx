@@ -7,6 +7,7 @@ import {
   FilePlus2,
   FolderOpen,
   Layers,
+  Maximize2,
   RotateCw,
   Trash2,
 } from 'lucide-react';
@@ -15,6 +16,7 @@ import { FileQueuePanel } from './components/FileQueuePanel';
 import { SettingsAndPreviewPanel } from './components/SettingsAndPreviewPanel';
 import { NoteComposerModal } from './components/NoteComposerModal';
 import { ExportResultModal } from './components/ExportResultModal';
+import { QuickLookModal } from './components/QuickLookModal';
 import {
   ExportHistoryItem,
   FileCategory,
@@ -52,10 +54,12 @@ export default function App() {
   const [activePresetId, setActivePresetId] = useState<string>('binder-pdf');
 
   const [previewPages, setPreviewPages] = useState<string[]>([]);
+  const [activePreviewPageIndex, setActivePreviewPageIndex] = useState<number>(0);
   const [isRenderingPreview, setIsRenderingPreview] = useState(false);
   const [isMerging, setIsMerging] = useState(false);
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
+  const [isQuickLookOpen, setIsQuickLookOpen] = useState(false);
   const [latestExportResult, setLatestExportResult] = useState<ExportHistoryItem | null>(null);
   const [exportHistory, setExportHistory] = useState<ExportHistoryItem[]>([]);
   const [statusBanner, setStatusBanner] = useState<string>('');
@@ -64,6 +68,7 @@ export default function App() {
     const sampleItems = await createSampleBundle();
     setItems(sampleItems);
     setSelectedItemId(sampleItems[0]?.id ?? null);
+    setActivePreviewPageIndex(0);
     setStatusBanner('Loaded 4 sample files into queue.');
   }, []);
 
@@ -92,6 +97,47 @@ export default function App() {
       cancelled = true;
     };
   }, [items, settings]);
+
+  // Compute starting preview page index for a given item ID
+  const getPreviewPageIndexForItem = useCallback(
+    (targetId: string): number => {
+      if (
+        settings.outputFormat === 'stitched-png' ||
+        settings.outputFormat === 'stitched-jpeg'
+      ) {
+        return 0;
+      }
+      let pageOffset = settings.includeTableOfContents ? 1 : 0;
+      for (const item of items) {
+        if (item.id === targetId) {
+          return pageOffset;
+        }
+        const selectedPages = parsePageRange(item.pageRange, item.pageCount);
+        pageOffset += Math.min(selectedPages.length, 3);
+      }
+      return 0;
+    },
+    [items, settings.outputFormat, settings.includeTableOfContents]
+  );
+
+  const handleSelectItem = useCallback(
+    (id: string) => {
+      setSelectedItemId(id);
+      const sheetIdx = getPreviewPageIndexForItem(id);
+      setActivePreviewPageIndex(sheetIdx);
+    },
+    [getPreviewPageIndexForItem]
+  );
+
+  const handleOpenQuickLookForItem = useCallback(
+    (id: string) => {
+      setSelectedItemId(id);
+      const sheetIdx = getPreviewPageIndexForItem(id);
+      setActivePreviewPageIndex(sheetIdx);
+      setIsQuickLookOpen(true);
+    },
+    [getPreviewPageIndexForItem]
+  );
 
   const filteredItems = useMemo(
     () => filterQueueItems(items, searchQuery, categoryFilter),
@@ -138,12 +184,24 @@ export default function App() {
     setItems((prev) => moveQueueItem(prev, index, targetIndex));
   }, []);
 
+  const handleReorderByIndex = useCallback((fromIndex: number, toIndex: number) => {
+    setItems((prev) => moveQueueItem(prev, fromIndex, toIndex));
+    setStatusBanner(`Moved file from position #${fromIndex + 1} to #${toIndex + 1}.`);
+  }, []);
+
   const handleRotateItem = useCallback((id: string) => {
     setItems((prev) =>
       prev.map((item) =>
         item.id === id ? { ...item, rotation: rotateClockwise(item.rotation) } : item
       )
     );
+  }, []);
+
+  const handleRenameItem = useCallback((id: string, newName: string) => {
+    setItems((prev) =>
+      prev.map((item) => (item.id === id ? { ...item, name: newName } : item))
+    );
+    setStatusBanner(`Renamed file to "${newName}".`);
   }, []);
 
   const handleDuplicateItem = useCallback((id: string) => {
@@ -224,6 +282,25 @@ export default function App() {
     }
   }, [items, settings, isMerging]);
 
+  // Desktop keyboard shortcuts (R to rotate selected file)
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if ((e.key === 'r' || e.key === 'R') && !e.metaKey && !e.ctrlKey && selectedItemId) {
+        e.preventDefault();
+        handleRotateItem(selectedItemId);
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [selectedItemId, handleRotateItem]);
+
+  const selectedItem = useMemo(
+    () => items.find((i) => i.id === selectedItemId),
+    [items, selectedItemId]
+  );
+
   return (
     <div className="min-h-screen flex flex-col bg-[#F4F4F5] text-zinc-900">
       {/* 3-Zone Top Bar */}
@@ -236,7 +313,7 @@ export default function App() {
         fileCount={items.length}
       />
 
-      {/* Compact Desktop Summary Strip (replaces bloated SaaS KPI cards) */}
+      {/* Compact Desktop Summary Strip */}
       <div
         role="region"
         aria-label="Workspace Summary Metrics"
@@ -282,7 +359,7 @@ export default function App() {
                 items={items}
                 filteredItems={filteredItems}
                 selectedItemId={selectedItemId}
-                onSelectItem={setSelectedItemId}
+                onSelectItem={handleSelectItem}
                 searchQuery={searchQuery}
                 onSearchChange={setSearchQuery}
                 categoryFilter={categoryFilter}
@@ -296,12 +373,15 @@ export default function App() {
                   setStatusBanner('Cleared all files from queue.');
                 }}
                 onMoveItem={handleMoveItem}
+                onReorderByIndex={handleReorderByIndex}
                 onRotateItem={handleRotateItem}
                 onDuplicateItem={handleDuplicateItem}
                 onRemoveItem={handleRemoveItem}
+                onRenameItem={handleRenameItem}
                 onUpdatePageRange={handleUpdatePageRange}
                 onUpdateFitMode={handleUpdateFitMode}
                 onSortQueue={handleSortQueue}
+                onOpenQuickLook={handleOpenQuickLookForItem}
               />
             </div>
 
@@ -310,6 +390,9 @@ export default function App() {
                 settings={settings}
                 onUpdateSettings={handleUpdateSettings}
                 previewPages={previewPages}
+                activePreviewPageIndex={activePreviewPageIndex}
+                onChangePreviewPageIndex={setActivePreviewPageIndex}
+                onOpenQuickLookAtCurrentPage={() => setIsQuickLookOpen(true)}
                 isRenderingPreview={isRenderingPreview}
                 totalFiles={metrics.totalFiles}
                 totalSelectedPages={metrics.totalSelectedPages}
@@ -401,6 +484,14 @@ export default function App() {
 
                         <div className="flex items-center justify-between pt-2 border-t border-zinc-100">
                           <div className="flex items-center gap-0.5">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenQuickLookForItem(item.id)}
+                              aria-label={`Inspect '${item.name}' in Quick-Look`}
+                              className="p-1 text-zinc-600 hover:text-zinc-900 rounded cursor-pointer"
+                            >
+                              <Maximize2 className="w-3.5 h-3.5" />
+                            </button>
                             <button
                               type="button"
                               onClick={() => handleMoveItem(idx, 'up')}
@@ -597,6 +688,18 @@ export default function App() {
         isOpen={isNoteModalOpen}
         onClose={() => setIsNoteModalOpen(false)}
         onAddNote={handleAddCustomNote}
+      />
+
+      <QuickLookModal
+        isOpen={isQuickLookOpen}
+        pages={previewPages}
+        pageIndex={activePreviewPageIndex}
+        onChangePageIndex={setActivePreviewPageIndex}
+        onClose={() => setIsQuickLookOpen(false)}
+        onRotateActiveItem={
+          selectedItem ? () => handleRotateItem(selectedItem.id) : undefined
+        }
+        activeItemName={selectedItem?.name}
       />
 
       <ExportResultModal

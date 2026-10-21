@@ -2,12 +2,15 @@ import React, { useRef, useState } from 'react';
 import {
   ArrowDown,
   ArrowUp,
+  Check,
   Copy,
   FilePlus2,
-  FileText,
   FolderOpen,
   Grid,
+  GripVertical,
   List,
+  Maximize2,
+  Pencil,
   RotateCw,
   Search,
   Trash2,
@@ -19,6 +22,7 @@ import {
   MergeFileItem,
 } from '../types/merger';
 import { formatFileSize, parsePageRange } from '../utils/mergeLogic';
+import { BrandIcon, FormatCategoryIcon } from './BrandIcon';
 
 interface FileQueuePanelProps {
   items: MergeFileItem[];
@@ -34,12 +38,15 @@ interface FileQueuePanelProps {
   onOpenNoteModal: () => void;
   onClearAll: () => void;
   onMoveItem: (index: number, direction: 'up' | 'down') => void;
+  onReorderByIndex: (fromIndex: number, toIndex: number) => void;
   onRotateItem: (id: string) => void;
   onDuplicateItem: (id: string) => void;
   onRemoveItem: (id: string) => void;
+  onRenameItem: (id: string, newName: string) => void;
   onUpdatePageRange: (id: string, range: string) => void;
   onUpdateFitMode: (id: string, fit: ImageFitMode) => void;
   onSortQueue: (by: 'name' | 'size' | 'type' | 'pages') => void;
+  onOpenQuickLook: (itemId: string) => void;
 }
 
 export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
@@ -56,23 +63,47 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
   onOpenNoteModal,
   onClearAll,
   onMoveItem,
+  onReorderByIndex,
   onRotateItem,
   onDuplicateItem,
   onRemoveItem,
+  onRenameItem,
   onUpdatePageRange,
   onUpdateFitMode,
   onSortQueue,
+  onOpenQuickLook,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [isDraggingOverZone, setIsDraggingOverZone] = useState(false);
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
 
-  const handleDrop = (e: React.DragEvent) => {
+  // Interactive Drag-to-Reorder state
+  const [draggedMasterIndex, setDraggedMasterIndex] = useState<number | null>(null);
+  const [dragOverMasterIndex, setDragOverMasterIndex] = useState<number | null>(null);
+
+  // Interactive Inline Rename state
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingName, setEditingName] = useState('');
+
+  const handleDropZone = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDraggingOver(false);
+    setIsDraggingOverZone(false);
+    if (draggedMasterIndex !== null) return;
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       onAddFiles(e.dataTransfer.files);
     }
+  };
+
+  const startEditingName = (item: MergeFileItem) => {
+    setEditingId(item.id);
+    setEditingName(item.name);
+  };
+
+  const commitEditingName = (id: string) => {
+    if (editingName.trim()) {
+      onRenameItem(id, editingName.trim());
+    }
+    setEditingId(null);
   };
 
   return (
@@ -80,12 +111,14 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
       aria-label="Source File Queue"
       onDragOver={(e) => {
         e.preventDefault();
-        setIsDraggingOver(true);
+        if (draggedMasterIndex === null) {
+          setIsDraggingOverZone(true);
+        }
       }}
-      onDragLeave={() => setIsDraggingOver(false)}
-      onDrop={handleDrop}
-      className={`flex flex-col bg-white border border-zinc-200 rounded-lg transition-colors ${
-        isDraggingOver ? 'border-zinc-900 bg-zinc-50' : ''
+      onDragLeave={() => setIsDraggingOverZone(false)}
+      onDrop={handleDropZone}
+      className={`flex flex-col bg-white border border-zinc-200 rounded-lg shadow-2xs transition-colors duration-150 ${
+        isDraggingOverZone ? 'border-zinc-900 bg-zinc-50' : ''
       }`}
     >
       {/* Hidden Native File Input */}
@@ -106,22 +139,25 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
 
       {/* Compact Desktop Queue Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-zinc-50 border-b border-zinc-200 rounded-t-lg">
-        <div>
-          <h1 className="text-sm font-bold text-zinc-900 balance-text">
-            Source Document & Image Queue
-          </h1>
-          <p className="text-[11px] text-zinc-500 mt-0.5 tabular-nums">
-            <span>{items.length} queued files</span>
-            <span className="mx-1.5" aria-hidden="true">·</span>
-            <span>PDF, JPG, PNG, WebP, SVG, Markdown, TXT, CSV</span>
-          </p>
+        <div className="flex items-center gap-2.5">
+          <BrandIcon className="w-5 h-5 shrink-0" />
+          <div>
+            <h1 className="text-sm font-bold text-zinc-900 balance-text leading-tight">
+              Source Document & Image Queue
+            </h1>
+            <p className="text-[11px] text-zinc-500 mt-0.5 tabular-nums">
+              <span>{items.length} queued files</span>
+              <span className="mx-1.5" aria-hidden="true">·</span>
+              <span>Drag rows to reorder · Click any row to sync preview</span>
+            </p>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-900 bg-white border border-zinc-300 rounded hover:bg-zinc-100 transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-900 bg-white border border-zinc-300 rounded hover:bg-zinc-100 active:scale-[0.98] transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <Upload className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Add Files</span>
@@ -130,7 +166,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
           <button
             type="button"
             onClick={onOpenNoteModal}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-100 rounded transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] rounded transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <FilePlus2 className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Add Text Page</span>
@@ -139,7 +175,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
           <button
             type="button"
             onClick={onLoadSampleBundle}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-100 rounded transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] rounded transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <FolderOpen className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Load Sample Bundle</span>
@@ -149,7 +185,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
             <button
               type="button"
               onClick={onClearAll}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 rounded transition-colors whitespace-nowrap shrink-0 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 rounded transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Clear All</span>
@@ -172,7 +208,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="Filter queue by filename or format..."
               aria-label="Filter queue by filename or format"
-              className="w-full pl-8 pr-2.5 py-1 text-xs bg-zinc-50 border border-zinc-300 rounded text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:bg-white focus:border-zinc-900"
+              className="w-full pl-8 pr-2.5 py-1 text-xs bg-zinc-50 border border-zinc-300 rounded text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:bg-white focus:border-zinc-900 transition-colors"
             />
           </div>
 
@@ -193,7 +229,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                 key={tab.id}
                 type="button"
                 onClick={() => onCategoryFilterChange(tab.id)}
-                className={`px-2 py-0.5 text-xs font-medium rounded-xs transition-colors whitespace-nowrap shrink-0 cursor-pointer ${
+                className={`px-2 py-0.5 text-xs font-medium rounded-xs transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer ${
                   categoryFilter === tab.id
                     ? 'bg-white text-zinc-900 shadow-2xs'
                     : 'text-zinc-600 hover:text-zinc-900'
@@ -259,9 +295,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
       {/* Empty State */}
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center text-center px-6 py-12">
-          <div className="w-10 h-10 rounded-lg bg-zinc-100 border border-zinc-200 flex items-center justify-center text-zinc-700 mb-3">
-            <FileText className="w-5 h-5" aria-hidden="true" />
-          </div>
+          <BrandIcon className="w-11 h-11 mb-3" />
           <h2 className="text-sm font-semibold text-zinc-900">
             Drop PDFs, JPEGs, PNGs, or text files here to combine
           </h2>
@@ -300,47 +334,143 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
           </button>
         </div>
       ) : viewMode === 'list' ? (
-        /* Compact Desktop Table List View */
+        /* Interactive Drag-and-Drop Table List View */
         <div className="divide-y divide-zinc-200">
           {filteredItems.map((item) => {
             const masterIndex = items.findIndex((x) => x.id === item.id);
             const activePages = parsePageRange(item.pageRange, item.pageCount);
             const isSelected = selectedItemId === item.id;
+            const isDragTarget = dragOverMasterIndex === masterIndex && draggedMasterIndex !== masterIndex;
 
             return (
               <div
                 key={item.id}
+                draggable={editingId !== item.id}
+                onDragStart={(e) => {
+                  setDraggedMasterIndex(masterIndex);
+                  e.dataTransfer.effectAllowed = 'move';
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  if (draggedMasterIndex !== null) {
+                    setDragOverMasterIndex(masterIndex);
+                  }
+                }}
+                onDragEnd={() => {
+                  setDraggedMasterIndex(null);
+                  setDragOverMasterIndex(null);
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (draggedMasterIndex !== null && draggedMasterIndex !== masterIndex) {
+                    onReorderByIndex(draggedMasterIndex, masterIndex);
+                  }
+                  setDraggedMasterIndex(null);
+                  setDragOverMasterIndex(null);
+                }}
                 onClick={() => onSelectItem(item.id)}
-                className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 px-4 py-2.5 transition-colors cursor-pointer ${
-                  isSelected ? 'bg-zinc-100/90' : 'hover:bg-zinc-50'
+                className={`group flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 sm:gap-3 px-4 py-2.5 transition-all duration-150 cursor-pointer ${
+                  isDragTarget
+                    ? 'bg-zinc-200/70'
+                    : isSelected
+                    ? 'bg-zinc-100/95'
+                    : 'hover:bg-zinc-50'
                 }`}
               >
-                {/* Left: Sequence Index + Thumbnail + Unboxed Metadata */}
-                <div className="flex items-center gap-3 min-w-0 flex-1">
+                {/* Left: Drag Handle + Index + Interactive Thumbnail + Metadata */}
+                <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                  <span
+                    title="Drag row to reorder"
+                    className="text-zinc-300 group-hover:text-zinc-500 cursor-grab active:cursor-grabbing shrink-0 transition-colors"
+                    aria-hidden="true"
+                  >
+                    <GripVertical className="w-3.5 h-3.5" />
+                  </span>
+
                   <span className="font-mono text-xs font-semibold text-zinc-400 w-5 text-right tabular-nums shrink-0">
                     {String(masterIndex + 1).padStart(2, '0')}
                   </span>
 
-                  <div className="w-9 h-12 bg-zinc-100 border border-zinc-200 rounded-xs overflow-hidden shrink-0 flex items-center justify-center">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectItem(item.id);
+                      onOpenQuickLook(item.id);
+                    }}
+                    aria-label={`Quick-Look preview of ${item.name}`}
+                    className="relative w-9 h-12 bg-zinc-100 border border-zinc-200 rounded-xs overflow-hidden shrink-0 flex items-center justify-center group/thumb cursor-pointer"
+                  >
                     {item.thumbnailDataUrl ? (
                       <img
                         src={item.thumbnailDataUrl}
                         alt={`Thumbnail of ${item.name}`}
                         referrerPolicy="no-referrer"
                         style={{ transform: `rotate(${item.rotation}deg)` }}
-                        className="w-full h-full object-cover transition-transform duration-150"
+                        className="w-full h-full object-cover transition-transform duration-150 group-hover/thumb:scale-105"
                       />
                     ) : (
                       <span className="font-mono text-[10px] font-semibold text-zinc-500">
                         {item.extension}
                       </span>
                     )}
-                  </div>
+                  </button>
 
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-zinc-900 truncate">
-                      {item.name}
-                    </p>
+                    {editingId === item.id ? (
+                      <div
+                        className="flex items-center gap-1.5"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <input
+                          type="text"
+                          value={editingName}
+                          onChange={(e) => setEditingName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') commitEditingName(item.id);
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          autoFocus
+                          aria-label={`Rename ${item.name}`}
+                          className="px-2 py-0.5 text-xs font-semibold bg-white border border-zinc-900 rounded text-zinc-900 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => commitEditingName(item.id)}
+                          aria-label="Save filename"
+                          className="p-1 bg-zinc-900 text-white rounded cursor-pointer"
+                        >
+                          <Check className="w-3 h-3" aria-hidden="true" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1.5">
+                        <FormatCategoryIcon
+                          category={item.category}
+                          className="w-3.5 h-3.5 text-zinc-500 shrink-0"
+                        />
+                        <p
+                          onDoubleClick={() => startEditingName(item)}
+                          className="text-xs font-semibold text-zinc-900 truncate"
+                        >
+                          {item.name}
+                        </p>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditingName(item);
+                          }}
+                          aria-label={`Rename '${item.name}'`}
+                          className="opacity-0 group-hover:opacity-100 focus:opacity-100 p-0.5 text-zinc-400 hover:text-zinc-800 rounded transition-opacity cursor-pointer"
+                        >
+                          <Pencil className="w-3 h-3" aria-hidden="true" />
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Zero-Pill Metadata Discipline: Clean unboxed text with middot separators */}
                     <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-500 font-mono tabular-nums mt-0.5">
                       <span className="font-semibold text-zinc-700">{item.extension}</span>
                       <span aria-hidden="true">·</span>
@@ -367,7 +497,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                   </div>
                 </div>
 
-                {/* Right: Per-File Controls */}
+                {/* Right: Per-File Interactive Controls */}
                 <div
                   className="flex flex-wrap items-center gap-2 shrink-0"
                   onClick={(e) => e.stopPropagation()}
@@ -417,6 +547,14 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                   <div className="flex items-center gap-0.5 border-l border-zinc-200 pl-2">
                     <button
                       type="button"
+                      onClick={() => onOpenQuickLook(item.id)}
+                      aria-label={`Inspect '${item.name}' in Quick-Look`}
+                      className="p-1 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60 rounded transition-colors cursor-pointer"
+                    >
+                      <Maximize2 className="w-3.5 h-3.5" aria-hidden="true" />
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => onMoveItem(masterIndex, 'up')}
                       disabled={masterIndex <= 0}
                       aria-label={`Move '${item.name}' up`}
@@ -464,7 +602,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
           })}
         </div>
       ) : (
-        /* Thumbnail Grid View */
+        /* Interactive Thumbnail Grid View */
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3 p-4">
           {filteredItems.map((item) => {
             const masterIndex = items.findIndex((x) => x.id === item.id);
@@ -472,8 +610,19 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
             return (
               <div
                 key={item.id}
+                draggable
+                onDragStart={() => setDraggedMasterIndex(masterIndex)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (draggedMasterIndex !== null && draggedMasterIndex !== masterIndex) {
+                    onReorderByIndex(draggedMasterIndex, masterIndex);
+                  }
+                  setDraggedMasterIndex(null);
+                }}
                 onClick={() => onSelectItem(item.id)}
-                className={`flex flex-col border rounded-md overflow-hidden transition-colors cursor-pointer ${
+                className={`flex flex-col border rounded-md overflow-hidden transition-all duration-150 cursor-pointer ${
                   isSelected ? 'border-zinc-900 bg-zinc-50' : 'border-zinc-200 hover:border-zinc-300'
                 }`}
               >
@@ -496,9 +645,15 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                         {item.extension} · {item.pageCount}p · {formatFileSize(item.sizeBytes)}
                       </span>
                     </div>
-                    <p className="text-xs font-semibold text-zinc-900 truncate mt-0.5">
-                      {item.name}
-                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <FormatCategoryIcon
+                        category={item.category}
+                        className="w-3.5 h-3.5 text-zinc-500 shrink-0"
+                      />
+                      <p className="text-xs font-semibold text-zinc-900 truncate">
+                        {item.name}
+                      </p>
+                    </div>
                   </div>
 
                   <div
@@ -508,10 +663,18 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                     <div className="flex items-center gap-0.5">
                       <button
                         type="button"
+                        onClick={() => onOpenQuickLook(item.id)}
+                        aria-label={`Inspect '${item.name}' in Quick-Look`}
+                        className="p-1 text-zinc-600 hover:text-zinc-900 rounded cursor-pointer"
+                      >
+                        <Maximize2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => onMoveItem(masterIndex, 'up')}
                         disabled={masterIndex <= 0}
                         aria-label={`Move '${item.name}' up`}
-                        className="p-1 text-zinc-600 hover:text-zinc-900 disabled:opacity-30 rounded"
+                        className="p-1 text-zinc-600 hover:text-zinc-900 disabled:opacity-30 rounded cursor-pointer"
                       >
                         <ArrowUp className="w-3.5 h-3.5" />
                       </button>
@@ -520,7 +683,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                         onClick={() => onMoveItem(masterIndex, 'down')}
                         disabled={masterIndex >= items.length - 1}
                         aria-label={`Move '${item.name}' down`}
-                        className="p-1 text-zinc-600 hover:text-zinc-900 disabled:opacity-30 rounded"
+                        className="p-1 text-zinc-600 hover:text-zinc-900 disabled:opacity-30 rounded cursor-pointer"
                       >
                         <ArrowDown className="w-3.5 h-3.5" />
                       </button>
@@ -528,7 +691,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                         type="button"
                         onClick={() => onRotateItem(item.id)}
                         aria-label={`Rotate '${item.name}' 90 degrees`}
-                        className="p-1 text-zinc-600 hover:text-zinc-900 rounded"
+                        className="p-1 text-zinc-600 hover:text-zinc-900 rounded cursor-pointer"
                       >
                         <RotateCw className="w-3.5 h-3.5" />
                       </button>
@@ -537,7 +700,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                       type="button"
                       onClick={() => onRemoveItem(item.id)}
                       aria-label={`Delete '${item.name}'`}
-                      className="p-1 text-red-600 hover:bg-red-50 rounded"
+                      className="p-1 text-red-600 hover:bg-red-50 rounded cursor-pointer"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
@@ -549,10 +712,12 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
         </div>
       )}
 
-      {/* Compact Desktop Footer Drop Bar */}
+      {/* Compact Desktop Footer Drop & Shortcut Bar */}
       {items.length > 0 && (
         <div className="px-4 py-2 bg-zinc-50 border-t border-zinc-200 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 rounded-b-lg">
-          <span>Drop additional PDF, JPG, PNG, or Markdown files anywhere in this queue.</span>
+          <span>
+            Shortcuts: Press <kbd className="font-mono text-zinc-700">R</kbd> to rotate selected file · Double-click title to rename
+          </span>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}

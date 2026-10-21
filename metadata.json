@@ -2,5 +2,7 @@
   "name": "OmniFuse Studio",
   "description": "Desktop-grade document converter and merger. Combine PDFs, JPGs, PNGs, screenshots, and text files into a single unified PDF, stitched image, or bundle.",
   "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
 }
