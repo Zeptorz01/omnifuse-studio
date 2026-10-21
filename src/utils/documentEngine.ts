@@ -493,6 +493,233 @@ export async function createSampleBundle(): Promise<MergeFileItem[]> {
   ];
 }
 
+async function generateMultiPagePdfDocument(
+  title: string,
+  docCode: string,
+  numPages: number
+): Promise<{ bytes: Uint8Array; thumb: string }> {
+  const pdfDoc = await PDFDocument.create();
+  const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const fontRegular = await pdfDoc.embedFont(StandardFonts.Helvetica);
+
+  for (let p = 1; p <= numPages; p++) {
+    const page = pdfDoc.addPage([595.28, 841.89]);
+    page.drawRectangle({
+      x: 0,
+      y: 828,
+      width: 595.28,
+      height: 14,
+      color: rgb(0.09, 0.09, 0.11),
+    });
+    page.drawText(`${title.toUpperCase()} — SECTION ${p} OF ${numPages}`, {
+      x: 48,
+      y: 775,
+      size: 15,
+      font: fontBold,
+      color: rgb(0.09, 0.09, 0.11),
+    });
+    page.drawText(`Document ID: ${docCode} · Sheet ${p}/${numPages} · Unlimited Multi-Page Stream`, {
+      x: 48,
+      y: 752,
+      size: 10,
+      font: fontRegular,
+      color: rgb(0.39, 0.45, 0.55),
+    });
+
+    let y = 705;
+    for (let row = 1; row <= 6; row++) {
+      page.drawText(`${p}.${row} Verification Clause & Technical Specification Block`, {
+        x: 48,
+        y,
+        size: 11,
+        font: fontBold,
+        color: rgb(0.09, 0.09, 0.11),
+      });
+      y -= 18;
+      page.drawText(
+        `Verified telemetry and structural tolerances for subsystem module #${p}0${row} pass all ISO benchmarks.`,
+        {
+          x: 48,
+          y,
+          size: 10,
+          font: fontRegular,
+          color: rgb(0.25, 0.28, 0.35),
+        }
+      );
+      y -= 34;
+    }
+  }
+
+  const bytes = await pdfDoc.save();
+  const thumb = renderStyledDocumentThumbnail({
+    title,
+    subtitle: `${numPages} pages · 595 × 842 pt`,
+    badge: 'PDF',
+    accentColor: '#18181B',
+    lines: [
+      `# ${title}`,
+      `Doc Ref: ${docCode} · ${numPages} Full Pages`,
+      '---',
+      '1. Complete Multi-Page Vector Stream',
+      'All pages preserved with zero page cap.',
+      '---',
+      '2. Lossless Page Extraction & Slicing',
+      'Supports custom ranges or full document.',
+    ],
+    pageCount: numPages,
+  });
+
+  return { bytes, thumb };
+}
+
+/**
+ * Generates a 12-file multi-format batch (with multi-page PDFs up to 6 pages each)
+ * so users can test merging >10 files (up to 20 max) with unlimited pages per file.
+ */
+export async function createExtendedSampleBatch(): Promise<MergeFileItem[]> {
+  const baseFour = await createSampleBundle();
+  const now = Date.now();
+
+  const specPdf = await generateMultiPagePdfDocument(
+    '05_System_Architecture_Spec.pdf',
+    'SPEC-2026-V5',
+    5
+  );
+  const auditPdf = await generateMultiPagePdfDocument(
+    '06_Quarterly_Security_Audit.pdf',
+    'AUD-2026-Q4',
+    4
+  );
+  const compliancePdf = await generateMultiPagePdfDocument(
+    '07_ISO_Compliance_Certificates.pdf',
+    'ISO-9001-CERT',
+    6
+  );
+  const addendumPdf = await generateMultiPagePdfDocument(
+    '08_Vendor_Procurement_Addendum.pdf',
+    'PROC-ADD-08',
+    3
+  );
+
+  const floorplan = generateSampleFloorplanJpeg();
+  const invoice = generateSampleInvoicePng();
+
+  const extraItems: MergeFileItem[] = [
+    {
+      id: `batch-pdf-5-${now}`,
+      name: '05_System_Architecture_Spec.pdf',
+      sizeBytes: specPdf.bytes.byteLength,
+      mimeType: 'application/pdf',
+      category: 'pdf',
+      extension: 'PDF',
+      pageCount: 5,
+      pageRange: 'all',
+      rotation: 0,
+      fitMode: 'contain',
+      addedAt: now + 10,
+      thumbnailDataUrl: specPdf.thumb,
+      rawBytes: specPdf.bytes,
+      width: 595,
+      height: 842,
+    },
+    {
+      id: `batch-pdf-6-${now}`,
+      name: '06_Quarterly_Security_Audit.pdf',
+      sizeBytes: auditPdf.bytes.byteLength,
+      mimeType: 'application/pdf',
+      category: 'pdf',
+      extension: 'PDF',
+      pageCount: 4,
+      pageRange: 'all',
+      rotation: 0,
+      fitMode: 'contain',
+      addedAt: now + 20,
+      thumbnailDataUrl: auditPdf.thumb,
+      rawBytes: auditPdf.bytes,
+      width: 595,
+      height: 842,
+    },
+    {
+      id: `batch-pdf-7-${now}`,
+      name: '07_ISO_Compliance_Certificates.pdf',
+      sizeBytes: compliancePdf.bytes.byteLength,
+      mimeType: 'application/pdf',
+      category: 'pdf',
+      extension: 'PDF',
+      pageCount: 6,
+      pageRange: 'all',
+      rotation: 0,
+      fitMode: 'contain',
+      addedAt: now + 30,
+      thumbnailDataUrl: compliancePdf.thumb,
+      rawBytes: compliancePdf.bytes,
+      width: 595,
+      height: 842,
+    },
+    {
+      id: `batch-jpg-8-${now}`,
+      name: '08_Sector_B_Cleanroom_Layout.jpg',
+      sizeBytes: floorplan.bytes.byteLength,
+      mimeType: 'image/jpeg',
+      category: 'image',
+      extension: 'JPG',
+      pageCount: 1,
+      pageRange: 'all',
+      rotation: 0,
+      fitMode: 'contain',
+      addedAt: now + 40,
+      thumbnailDataUrl: floorplan.dataUrl,
+      rawBytes: floorplan.bytes,
+      width: floorplan.width,
+      height: floorplan.height,
+    },
+    {
+      id: `batch-png-9-${now}`,
+      name: '09_Customs_Clearance_Voucher.png',
+      sizeBytes: invoice.bytes.byteLength,
+      mimeType: 'image/png',
+      category: 'image',
+      extension: 'PNG',
+      pageCount: 1,
+      pageRange: 'all',
+      rotation: 0,
+      fitMode: 'contain',
+      addedAt: now + 50,
+      thumbnailDataUrl: invoice.dataUrl,
+      rawBytes: invoice.bytes,
+      width: invoice.width,
+      height: invoice.height,
+    },
+    {
+      id: `batch-pdf-10-${now}`,
+      name: '10_Vendor_Procurement_Addendum.pdf',
+      sizeBytes: addendumPdf.bytes.byteLength,
+      mimeType: 'application/pdf',
+      category: 'pdf',
+      extension: 'PDF',
+      pageCount: 3,
+      pageRange: 'all',
+      rotation: 0,
+      fitMode: 'contain',
+      addedAt: now + 60,
+      thumbnailDataUrl: addendumPdf.thumb,
+      rawBytes: addendumPdf.bytes,
+      width: 595,
+      height: 842,
+    },
+    createCustomTextDocumentItem(
+      '11_Deployment_Signoff_Checklist.md',
+      '# Deployment Sign-Off Checklist\nAll 12 project files verified for unified compilation.\n\n## Verification Matrix\n- Hardware telemetry: Nominal\n- Optical calibration: Verified\n- Customs & freight: Cleared'
+    ),
+    createCustomTextDocumentItem(
+      '12_Final_Release_Manifest.md',
+      '# Final Release Manifest\nThis package combines 12 distinct multi-format files (PDFs, JPEGs, PNGs, and Markdown notes) with unlimited pages per file into a single unified deliverable.'
+    ),
+  ];
+
+  return [...baseFour, ...extraItems];
+}
+
 function loadImageElement(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -533,11 +760,11 @@ export async function parseUploadedFile(file: File): Promise<MergeFileItem> {
         `# ${file.name}`,
         `Source format: Portable Document Format`,
         '---',
-        `Detected pages: ${pageCount}`,
+        `Detected pages: ${pageCount} (No page limit)`,
         `Page dimensions: ${width} × ${height} pt`,
         `File size: ${formatFileSize(file.size)}`,
         '---',
-        'Vector pages will be copied losslessly',
+        'All vector pages copied losslessly',
         'into the unified output package.',
       ],
       pageCount,
@@ -703,7 +930,7 @@ async function renderRotatedImageToPngBytes(
 }
 
 /**
- * Generates visual preview canvases for the Live Inspector so the user sees exact page composition.
+ * Generates visual preview canvases for the Live Inspector for all pages (no page limit per file).
  */
 export async function renderCompositePreviewPages(
   items: MergeFileItem[],
@@ -720,7 +947,7 @@ export async function renderCompositePreviewPages(
   const pageDims = calculatePageDimensions(settings.pageSize, settings.orientation);
   const marginPt = getMarginPoints(settings.margin);
 
-  // Optional Table of Contents Cover Page
+  // Optional Table of Contents Cover Page (supports up to 20 files cleanly)
   if (settings.includeTableOfContents) {
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(pageDims.width);
@@ -732,42 +959,43 @@ export async function renderCompositePreviewPages(
     ctx.fillStyle = '#0F172A';
     ctx.fillRect(0, 0, canvas.width, 12);
 
-    ctx.font = 'bold 24px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText(settings.documentTitle || 'Unified Document Package', 48, 76);
+    ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText(settings.documentTitle || 'Unified Document Package', 48, 68);
 
     ctx.fillStyle = '#64748B';
-    ctx.font = '12px "JetBrains Mono", monospace';
+    ctx.font = '11px "JetBrains Mono", monospace';
     ctx.fillText(
       `Author: ${settings.documentAuthor || 'OmniFuse'} · ${items.length} Combined Source Files`,
       48,
-      102
+      92
     );
 
     ctx.strokeStyle = '#E2E8F0';
     ctx.beginPath();
-    ctx.moveTo(48, 122);
-    ctx.lineTo(canvas.width - 48, 122);
+    ctx.moveTo(48, 108);
+    ctx.lineTo(canvas.width - 48, 108);
     ctx.stroke();
 
     ctx.fillStyle = '#0F172A';
-    ctx.font = 'bold 13px "JetBrains Mono", monospace';
-    ctx.fillText('INDEXED CONTENTS', 48, 152);
+    ctx.font = 'bold 12px "JetBrains Mono", monospace';
+    ctx.fillText('INDEXED CONTENTS (UP TO 20 FILES · UNLIMITED PAGES)', 48, 134);
 
-    let y = 184;
+    let y = 162;
+    const rowStep = items.length > 12 ? 28 : 32;
     items.forEach((item, idx) => {
       const selectedPages = parsePageRange(item.pageRange, item.pageCount);
       ctx.fillStyle = '#0F172A';
-      ctx.font = '600 13px "Plus Jakarta Sans", sans-serif';
-      ctx.fillText(`${String(idx + 1).padStart(2, '0')}. ${item.name}`, 48, y);
+      ctx.font = '600 12px "Plus Jakarta Sans", sans-serif';
+      ctx.fillText(`${String(idx + 1).padStart(2, '0')}. ${item.name.slice(0, 38)}`, 48, y);
 
       ctx.fillStyle = '#64748B';
-      ctx.font = '12px "JetBrains Mono", monospace';
+      ctx.font = '11px "JetBrains Mono", monospace';
       ctx.fillText(
         `${item.extension} · ${selectedPages.length}p · ${formatFileSize(item.sizeBytes)}`,
         canvas.width - 210,
         y
       );
-      y += 30;
+      y += rowStep;
     });
 
     if (settings.watermarkText.trim()) {
@@ -777,11 +1005,22 @@ export async function renderCompositePreviewPages(
     pages.push(canvas.toDataURL('image/png'));
   }
 
+  // Render every selected page for every file with zero page limit per file
   for (const item of items) {
     const selectedPages = parsePageRange(item.pageRange, item.pageCount);
-    const previewCount = Math.min(selectedPages.length, 3); // cap per-item preview pages for responsiveness
+    let cachedImg: HTMLImageElement | null = null;
+    try {
+      const rotated = await renderRotatedImageToPngBytes(
+        item.thumbnailDataUrl,
+        item.rotation,
+        settings.imageQuality
+      );
+      cachedImg = await loadImageElement(rotated.previewUrl);
+    } catch {
+      cachedImg = null;
+    }
 
-    for (let pIdx = 0; pIdx < previewCount; pIdx++) {
+    for (let pIdx = 0; pIdx < selectedPages.length; pIdx++) {
       const pageNumberInSource = selectedPages[pIdx] + 1;
       const canvas = document.createElement('canvas');
       canvas.width = Math.round(pageDims.width);
@@ -791,18 +1030,21 @@ export async function renderCompositePreviewPages(
       ctx.fillStyle = settings.backgroundColor || '#FFFFFF';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      try {
-        const rotated = await renderRotatedImageToPngBytes(
-          item.thumbnailDataUrl,
-          item.rotation,
-          settings.imageQuality
-        );
-        const img = await loadImageElement(rotated.previewUrl);
+      if (cachedImg) {
         const boxW = Math.max(40, canvas.width - marginPt * 2);
-        const boxH = Math.max(40, canvas.height - marginPt * 2 - (settings.includePageNumbers ? 24 : 0));
-        const fit = calculateImageFitRect(img.width, img.height, boxW, boxH, item.fitMode);
-        ctx.drawImage(img, marginPt + fit.x, marginPt + fit.y, fit.width, fit.height);
-      } catch {
+        const boxH = Math.max(
+          40,
+          canvas.height - marginPt * 2 - (settings.includePageNumbers ? 24 : 0)
+        );
+        const fit = calculateImageFitRect(
+          cachedImg.width,
+          cachedImg.height,
+          boxW,
+          boxH,
+          item.fitMode
+        );
+        ctx.drawImage(cachedImg, marginPt + fit.x, marginPt + fit.y, fit.width, fit.height);
+      } else {
         ctx.fillStyle = '#334155';
         ctx.font = '14px "Plus Jakarta Sans", sans-serif';
         ctx.fillText(item.name, marginPt, marginPt + 30);
@@ -812,7 +1054,7 @@ export async function renderCompositePreviewPages(
         ctx.fillStyle = '#475569';
         ctx.font = '11px "JetBrains Mono", monospace';
         ctx.fillText(
-          `${item.name} (Source Page ${pageNumberInSource} of ${item.pageCount})`,
+          `${item.name} — Source Page ${pageNumberInSource} of ${item.pageCount}`,
           marginPt,
           22
         );

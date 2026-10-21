@@ -10,6 +10,8 @@ import {
   WorkspacePreset,
 } from '../types/merger';
 
+export const MAX_QUEUE_FILES = 20;
+
 export const DEFAULT_MERGE_SETTINGS: MergeSettings = {
   outputFilename: 'unified-document-package',
   documentTitle: 'Unified Document Package',
@@ -342,3 +344,27 @@ export function calculateQueueMetrics(
     categoryCounts,
   };
 }
+
+export function enforceQueueLimit<T>(
+  currentItems: T[],
+  incomingItems: T[],
+  maxFiles = MAX_QUEUE_FILES
+): {
+  nextItems: T[];
+  addedCount: number;
+  rejectedCount: number;
+  limitReached: boolean;
+} {
+  const remainingSlots = Math.max(0, maxFiles - currentItems.length);
+  const accepted = incomingItems.slice(0, remainingSlots);
+  const nextItems = [...currentItems, ...accepted];
+  const rejectedCount = Math.max(0, incomingItems.length - accepted.length);
+
+  return {
+    nextItems,
+    addedCount: accepted.length,
+    rejectedCount,
+    limitReached: nextItems.length >= maxFiles || rejectedCount > 0,
+  };
+}
+

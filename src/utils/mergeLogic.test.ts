@@ -10,6 +10,8 @@ import {
   moveQueueItem,
   filterQueueItems,
   calculateQueueMetrics,
+  MAX_QUEUE_FILES,
+  enforceQueueLimit,
 } from './mergeLogic';
 import { MergeFileItem } from '../types/merger';
 
@@ -39,11 +41,14 @@ test('formatFileSize formats bytes, KB, and MB with tabular clarity', () => {
   assert.equal(formatFileSize(1048576 * 2.5), '2.50 MB');
 });
 
-test('parsePageRange resolves all, ranges, and comma-separated page indices', () => {
+test('parsePageRange resolves all, ranges, and comma-separated page indices with no page limit', () => {
   assert.deepEqual(parsePageRange('all', 4), [0, 1, 2, 3]);
   assert.deepEqual(parsePageRange('1-2, 4', 5), [0, 1, 3]);
   assert.deepEqual(parsePageRange('3-1', 4), [0, 1, 2]);
-  assert.deepEqual(parsePageRange('99', 3), [0, 1, 2]); // out-of-range falls back safely to all pages
+  assert.deepEqual(parsePageRange('99', 3), [0, 1, 2]);
+  const hundredPages = parsePageRange('all', 120);
+  assert.equal(hundredPages.length, 120);
+  assert.equal(hundredPages[119], 119);
 });
 
 test('rotateClockwise cycles through 0, 90, 180, 270', () => {
@@ -119,3 +124,16 @@ test('filterQueueItems and calculateQueueMetrics compute accurate totals', () =>
   assert.equal(metrics.totalSelectedPages, 4); // 2 from PDF + 1 from JPG + 1 TOC page
   assert.equal(metrics.totalSizeBytes, 200000);
 });
+
+test('enforceQueueLimit allows >10 files up to 20 maximum with unlimited pages per file', () => {
+  assert.equal(MAX_QUEUE_FILES, 20);
+  const existing = Array.from({ length: 12 }, (_, i) => ({ id: `f-${i + 1}` }));
+  const incoming = Array.from({ length: 10 }, (_, i) => ({ id: `new-${i + 1}` }));
+
+  const res = enforceQueueLimit(existing, incoming);
+  assert.equal(res.nextItems.length, 20);
+  assert.equal(res.addedCount, 8);
+  assert.equal(res.rejectedCount, 2);
+  assert.equal(res.limitReached, true);
+});
+

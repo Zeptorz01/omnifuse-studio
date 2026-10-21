@@ -27,8 +27,10 @@ import {
 } from './types/merger';
 import {
   DEFAULT_MERGE_SETTINGS,
+  MAX_QUEUE_FILES,
   WORKSPACE_PRESETS,
   calculateQueueMetrics,
+  enforceQueueLimit,
   filterQueueItems,
   formatFileSize,
   moveQueueItem,
@@ -38,6 +40,7 @@ import {
 } from './utils/mergeLogic';
 import {
   createCustomTextDocumentItem,
+  createExtendedSampleBatch,
   createSampleBundle,
   executeUnifiedMerge,
   parseUploadedFile,
@@ -69,12 +72,22 @@ export default function App() {
     setItems(sampleItems);
     setSelectedItemId(sampleItems[0]?.id ?? null);
     setActivePreviewPageIndex(0);
-    setStatusBanner('Loaded 4 sample files into queue.');
+    setStatusBanner(`Loaded 4 sample files into queue (up to ${MAX_QUEUE_FILES} files max, no page limit).`);
+  }, []);
+
+  const handleLoadExtendedBatch = useCallback(async () => {
+    const batchItems = await createExtendedSampleBatch();
+    setItems(batchItems);
+    setSelectedItemId(batchItems[0]?.id ?? null);
+    setActivePreviewPageIndex(0);
+    setStatusBanner(
+      `Loaded 12 multi-format files into queue (up to ${MAX_QUEUE_FILES} files max, unlimited pages per file).`
+    );
   }, []);
 
   useEffect(() => {
-    handleLoadSampleBundle();
-  }, [handleLoadSampleBundle]);
+    handleLoadExtendedBatch();
+  }, [handleLoadExtendedBatch]);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,7 +126,7 @@ export default function App() {
           return pageOffset;
         }
         const selectedPages = parsePageRange(item.pageRange, item.pageCount);
-        pageOffset += Math.min(selectedPages.length, 3);
+        pageOffset += selectedPages.length;
       }
       return 0;
     },
@@ -166,17 +179,47 @@ export default function App() {
       }
     }
     if (parsed.length > 0) {
-      setItems((prev) => [...prev, ...parsed]);
+      setItems((prev) => {
+        const { nextItems, addedCount, rejectedCount } = enforceQueueLimit(
+          prev,
+          parsed,
+          MAX_QUEUE_FILES
+        );
+        if (rejectedCount > 0 && addedCount === 0) {
+          setStatusBanner(
+            `Queue limit reached: Maximum ${MAX_QUEUE_FILES} files can be merged into 1 document.`
+          );
+        } else if (rejectedCount > 0) {
+          setStatusBanner(
+            `Added ${addedCount} ${addedCount === 1 ? 'file' : 'files'} (capped at ${MAX_QUEUE_FILES} files max; ${rejectedCount} skipped).`
+          );
+        } else {
+          setStatusBanner(
+            `Added ${addedCount} ${addedCount === 1 ? 'file' : 'files'} to queue (${nextItems.length}/${MAX_QUEUE_FILES} files).`
+          );
+        }
+        return nextItems;
+      });
       setSelectedItemId(parsed[0].id);
-      setStatusBanner(`Added ${parsed.length} ${parsed.length === 1 ? 'file' : 'files'} to queue.`);
     }
   }, []);
 
   const handleAddCustomNote = useCallback((title: string, content: string) => {
     const newItem = createCustomTextDocumentItem(title, content);
-    setItems((prev) => [...prev, newItem]);
-    setSelectedItemId(newItem.id);
-    setStatusBanner(`Added formatted text page "${newItem.name}" to queue.`);
+    setItems((prev) => {
+      const { nextItems, addedCount } = enforceQueueLimit(prev, [newItem], MAX_QUEUE_FILES);
+      if (addedCount === 0) {
+        setStatusBanner(
+          `Queue limit reached: Maximum ${MAX_QUEUE_FILES} files can be merged into 1 document.`
+        );
+        return prev;
+      }
+      setSelectedItemId(newItem.id);
+      setStatusBanner(
+        `Added formatted text page "${newItem.name}" (${nextItems.length}/${MAX_QUEUE_FILES} files).`
+      );
+      return nextItems;
+    });
   }, []);
 
   const handleMoveItem = useCallback((index: number, direction: 'up' | 'down') => {
@@ -206,6 +249,12 @@ export default function App() {
 
   const handleDuplicateItem = useCallback((id: string) => {
     setItems((prev) => {
+      if (prev.length >= MAX_QUEUE_FILES) {
+        setStatusBanner(
+          `Queue limit reached: Maximum ${MAX_QUEUE_FILES} files can be merged into 1 document.`
+        );
+        return prev;
+      }
       const idx = prev.findIndex((item) => item.id === id);
       if (idx === -1) return prev;
       const source = prev[idx];
@@ -217,6 +266,9 @@ export default function App() {
       };
       const next = [...prev];
       next.splice(idx + 1, 0, copy);
+      setStatusBanner(
+        `Duplicated "${source.name}" (${next.length}/${MAX_QUEUE_FILES} files in queue).`
+      );
       return next;
     });
   }, []);
@@ -322,7 +374,7 @@ export default function App() {
         <div className="max-w-[1440px] mx-auto px-4 sm:px-5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-600 font-mono tabular-nums">
           <div className="flex flex-wrap items-center gap-2">
             <span className="font-semibold text-zinc-900">
-              {metrics.totalFiles} {metrics.totalFiles === 1 ? 'File' : 'Files'}
+              {metrics.totalFiles} / {MAX_QUEUE_FILES} Files
             </span>
             <span aria-hidden="true">·</span>
             <span>
@@ -334,7 +386,7 @@ export default function App() {
               {settings.outputFormat === 'stitched-png' ||
               settings.outputFormat === 'stitched-jpeg'
                 ? '1 Continuous Strip'
-                : `${metrics.totalSelectedPages} Output Sheets`}
+                : `${metrics.totalSelectedPages} Output Sheets (Unlimited Pages/File)`}
             </span>
             <span aria-hidden="true">·</span>
             <span>{formatFileSize(metrics.totalSizeBytes)}</span>
@@ -345,7 +397,7 @@ export default function App() {
           </div>
 
           <span className="font-sans text-zinc-500 truncate max-w-md">
-            {statusBanner || 'Ready to combine documents and images'}
+            {statusBanner || 'Ready to combine up to 20 documents and images'}
           </span>
         </div>
       </div>
@@ -366,6 +418,7 @@ export default function App() {
                 onCategoryFilterChange={setCategoryFilter}
                 onAddFiles={handleAddFiles}
                 onLoadSampleBundle={handleLoadSampleBundle}
+                onLoadExtendedBatch={handleLoadExtendedBatch}
                 onOpenNoteModal={() => setIsNoteModalOpen(true)}
                 onClearAll={() => {
                   setItems([]);

@@ -21,7 +21,7 @@ import {
   ImageFitMode,
   MergeFileItem,
 } from '../types/merger';
-import { formatFileSize, parsePageRange } from '../utils/mergeLogic';
+import { MAX_QUEUE_FILES, formatFileSize, parsePageRange } from '../utils/mergeLogic';
 import { BrandIcon, FormatCategoryIcon } from './BrandIcon';
 
 interface FileQueuePanelProps {
@@ -35,6 +35,7 @@ interface FileQueuePanelProps {
   onCategoryFilterChange: (cat: 'all' | FileCategory) => void;
   onAddFiles: (files: FileList | File[]) => void;
   onLoadSampleBundle: () => void;
+  onLoadExtendedBatch: () => void;
   onOpenNoteModal: () => void;
   onClearAll: () => void;
   onMoveItem: (index: number, direction: 'up' | 'down') => void;
@@ -60,6 +61,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
   onCategoryFilterChange,
   onAddFiles,
   onLoadSampleBundle,
+  onLoadExtendedBatch,
   onOpenNoteModal,
   onClearAll,
   onMoveItem,
@@ -84,6 +86,8 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
   // Interactive Inline Rename state
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState('');
+
+  const isAtMaxCapacity = items.length >= MAX_QUEUE_FILES;
 
   const handleDropZone = (e: React.DragEvent) => {
     e.preventDefault();
@@ -145,10 +149,14 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
             <h1 className="text-sm font-bold text-zinc-900 balance-text leading-tight">
               Source Document & Image Queue
             </h1>
-            <p className="text-[11px] text-zinc-500 mt-0.5 tabular-nums">
-              <span>{items.length} queued files</span>
+            <p className="text-[11px] text-zinc-500 mt-0.5 font-mono tabular-nums">
+              <span className="font-semibold text-zinc-800">
+                {items.length} / {MAX_QUEUE_FILES} files
+              </span>
               <span className="mx-1.5" aria-hidden="true">·</span>
-              <span>Drag rows to reorder · Click any row to sync preview</span>
+              <span className="font-sans">Unlimited pages per file</span>
+              <span className="mx-1.5" aria-hidden="true">·</span>
+              <span className="font-sans">Drag rows to reorder</span>
             </p>
           </div>
         </div>
@@ -156,17 +164,19 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
         <div className="flex flex-wrap items-center gap-1.5">
           <button
             type="button"
+            disabled={isAtMaxCapacity}
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-900 bg-white border border-zinc-300 rounded hover:bg-zinc-100 active:scale-[0.98] transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-900 bg-white border border-zinc-300 rounded hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-40 transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed"
           >
             <Upload className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Add Files</span>
+            <span>{isAtMaxCapacity ? 'Max 20 Reached' : 'Add Files'}</span>
           </button>
 
           <button
             type="button"
+            disabled={isAtMaxCapacity}
             onClick={onOpenNoteModal}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] rounded transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-40 rounded transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed"
           >
             <FilePlus2 className="w-3.5 h-3.5" aria-hidden="true" />
             <span>Add Text Page</span>
@@ -174,11 +184,11 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
 
           <button
             type="button"
-            onClick={onLoadSampleBundle}
+            onClick={onLoadExtendedBatch}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] rounded transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
           >
             <FolderOpen className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Load Sample Bundle</span>
+            <span>Load 12-File Batch</span>
           </button>
 
           {items.length > 0 && (
@@ -309,6 +319,13 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
               className="px-3.5 py-1.5 text-xs font-semibold text-white bg-zinc-900 rounded hover:bg-zinc-800 transition-colors cursor-pointer"
             >
               Browse Local Files
+            </button>
+            <button
+              type="button"
+              onClick={onLoadExtendedBatch}
+              className="px-3.5 py-1.5 text-xs font-semibold text-zinc-800 bg-zinc-100 border border-zinc-300 hover:bg-zinc-200 rounded transition-colors cursor-pointer"
+            >
+              Load 12-File Batch
             </button>
             <button
               type="button"
@@ -582,8 +599,14 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                     <button
                       type="button"
                       onClick={() => onDuplicateItem(item.id)}
+                      disabled={isAtMaxCapacity}
+                      title={
+                        isAtMaxCapacity
+                          ? `Maximum limit of ${MAX_QUEUE_FILES} files reached`
+                          : `Duplicate '${item.name}'`
+                      }
                       aria-label={`Duplicate '${item.name}'`}
-                      className="p-1 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60 rounded transition-colors cursor-pointer"
+                      className="p-1 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60 disabled:opacity-30 rounded transition-colors cursor-pointer disabled:cursor-not-allowed"
                     >
                       <Copy className="w-3.5 h-3.5" aria-hidden="true" />
                     </button>
@@ -716,14 +739,17 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
       {items.length > 0 && (
         <div className="px-4 py-2 bg-zinc-50 border-t border-zinc-200 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-500 rounded-b-lg">
           <span>
-            Shortcuts: Press <kbd className="font-mono text-zinc-700">R</kbd> to rotate selected file · Double-click title to rename
+            Shortcuts: Press <kbd className="font-mono text-zinc-700">R</kbd> to rotate selected file · Double-click title to rename · Up to {MAX_QUEUE_FILES} files (no page limit per file)
           </span>
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="font-semibold text-zinc-900 hover:underline cursor-pointer"
+            disabled={isAtMaxCapacity}
+            className="font-semibold text-zinc-900 hover:underline disabled:opacity-40 disabled:no-underline cursor-pointer disabled:cursor-not-allowed"
           >
-            + Append More Files
+            {isAtMaxCapacity
+              ? `Max Queue Capacity (${MAX_QUEUE_FILES}/${MAX_QUEUE_FILES} Files)`
+              : `+ Append More Files (${items.length}/${MAX_QUEUE_FILES})`}
           </button>
         </div>
       )}
