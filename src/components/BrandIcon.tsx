@@ -1,63 +1,101 @@
 import React from 'react';
-import { FileCategory } from '../types/merger';
+import { FileCategory, StudioAppIconId, StudioThemeId } from '../types/merger';
+import { THEME_ICON_PALETTES, ThemeIcon } from './ThemeIcon';
 
 interface BrandIconProps {
+  appIconId?: StudioAppIconId;
   className?: string;
 }
 
 /**
- * Custom geometric desktop studio icon representing multiple document & image layers
- * converging into one unified master sheet.
+ * Custom desktop studio brand logo / app icon.
+ * Remains strictly fixed to `appIconId` (defaulting to the classic signature
+ * OmniFuse isometric stack) when switching color themes, and only changes when
+ * the user explicitly picks a new App Icon inside the Theme Menu.
  */
-export const BrandIcon: React.FC<BrandIconProps> = ({ className = 'w-6 h-6' }) => {
+export const BrandIcon: React.FC<BrandIconProps> = ({
+  appIconId = 'classic-layers',
+  className = 'w-6 h-6',
+}) => {
+  if (appIconId !== 'classic-layers') {
+    return <ThemeIcon themeId={appIconId} role="brand" className={className} />;
+  }
+
   return (
     <svg
-      viewBox="0 0 32 32"
+      viewBox="0 0 24 24"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={className}
       aria-hidden="true"
     >
-      {/* Tactile dark anodized squircle base */}
-      <rect width="32" height="32" rx="7" fill="#18181B" />
+      {/* Classic OmniFuse Signature Squircle Housing */}
       <rect
         x="1"
         y="1"
-        width="30"
-        height="30"
-        rx="6"
+        width="22"
+        height="22"
+        rx="5.5"
+        fill="#18181B"
         stroke="#3F3F46"
+        strokeWidth="1.25"
+      />
+      {/* Back Document Sheet */}
+      <rect
+        x="5"
+        y="4.5"
+        width="9.5"
+        height="12"
+        rx="1.6"
+        fill="#52525B"
+        stroke="#A1A1AA"
         strokeWidth="1"
       />
-      {/* Back sheet layer */}
-      <path
-        d="M8.5 19.5L16 23.5L23.5 19.5"
-        stroke="#71717A"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
+      {/* Front Document Sheet */}
+      <rect
+        x="8"
+        y="7"
+        width="10"
+        height="12.5"
+        rx="1.6"
+        fill="#FAFAFA"
+        stroke="#18181B"
+        strokeWidth="1"
       />
-      {/* Middle image/doc layer */}
+      {/* Precision Content Lines */}
       <path
-        d="M8.5 15.25L16 19.25L23.5 15.25"
-        stroke="#D4D4D8"
-        strokeWidth="2"
+        d="M10.5 10.5H15.5M10.5 13H15.5M10.5 15.5H13.5"
+        stroke="#18181B"
+        strokeWidth="1.35"
         strokeLinecap="round"
-        strokeLinejoin="round"
       />
-      {/* Top master unified diamond sheet */}
+      {/* Emerald Fusion Corner Emblem */}
+      <circle
+        cx="17.5"
+        cy="17.5"
+        r="3.6"
+        fill="#10B981"
+        stroke="#18181B"
+        strokeWidth="1.2"
+      />
       <path
-        d="M8.5 11L16 7L23.5 11L16 15L8.5 11Z"
-        fill="#FFFFFF"
+        d="M16.1 17.5H18.9M17.5 16.1V18.9"
+        stroke="#FFFFFF"
+        strokeWidth="1.35"
+        strokeLinecap="round"
       />
     </svg>
   );
 };
 
+
 export const FormatCategoryIcon: React.FC<{
   category: FileCategory;
+  themeId?: StudioThemeId;
   className?: string;
-}> = ({ category, className = 'w-3.5 h-3.5' }) => {
+}> = ({ category, themeId = 'swiss-zinc', className = 'w-3.5 h-3.5' }) => {
+  const spec = THEME_ICON_PALETTES[themeId] || THEME_ICON_PALETTES['swiss-zinc'];
+
   if (category === 'pdf') {
     return (
       <svg
@@ -66,16 +104,26 @@ export const FormatCategoryIcon: React.FC<{
         className={className}
         aria-hidden="true"
       >
+        <rect
+          x="1.5"
+          y="1.5"
+          width="13"
+          height="13"
+          rx={spec.shape === 'circle' ? '6.5' : spec.shape === 'squircle' ? '2.5' : '3.5'}
+          fill={spec.bg}
+          stroke={spec.border}
+          strokeWidth="1.2"
+        />
         <path
-          d="M3.5 2h6l3 3v9a.5.5 0 0 1-.5.5h-8.5a.5.5 0 0 1-.5-.5V2.5A.5.5 0 0 1 3.5 2Z"
-          stroke="currentColor"
-          strokeWidth="1.3"
+          d="M5 4.5H9L11 6.5V11.5H5V4.5Z"
+          stroke={spec.primary}
+          strokeWidth="1.2"
           strokeLinejoin="round"
         />
         <path
-          d="M9 2v3.5h3.5M5.5 8.5h5M5.5 11h3.5"
-          stroke="currentColor"
-          strokeWidth="1.3"
+          d="M6.5 8.5H9.5M6.5 10.2H8.5"
+          stroke={spec.core}
+          strokeWidth="1.2"
           strokeLinecap="round"
         />
       </svg>
@@ -91,18 +139,19 @@ export const FormatCategoryIcon: React.FC<{
         aria-hidden="true"
       >
         <rect
-          x="2.25"
-          y="2.75"
-          width="11.5"
-          height="10.5"
-          rx="1.5"
-          stroke="currentColor"
-          strokeWidth="1.3"
+          x="1.5"
+          y="1.5"
+          width="13"
+          height="13"
+          rx={spec.shape === 'circle' ? '6.5' : spec.shape === 'squircle' ? '2.5' : '3.5'}
+          fill={spec.bg}
+          stroke={spec.border}
+          strokeWidth="1.2"
         />
-        <circle cx="5.75" cy="6.25" r="1.1" fill="currentColor" />
+        <circle cx="6" cy="6" r="1.2" fill={spec.core} />
         <path
-          d="M2.75 11.5l3.25-3 2.5 2.25 2-1.75 2.75 2.5"
-          stroke="currentColor"
+          d="M3.8 11.5L6.8 8.5L9 10.5L10.8 8.8L12.5 11.5"
+          stroke={spec.primary}
           strokeWidth="1.3"
           strokeLinecap="round"
           strokeLinejoin="round"
@@ -119,17 +168,18 @@ export const FormatCategoryIcon: React.FC<{
       aria-hidden="true"
     >
       <rect
-        x="2.5"
-        y="2.25"
-        width="11"
-        height="11.5"
-        rx="1.5"
-        stroke="currentColor"
-        strokeWidth="1.3"
+        x="1.5"
+        y="1.5"
+        width="13"
+        height="13"
+        rx={spec.shape === 'circle' ? '6.5' : spec.shape === 'squircle' ? '2.5' : '3.5'}
+        fill={spec.bg}
+        stroke={spec.border}
+        strokeWidth="1.2"
       />
       <path
-        d="M5 5.75h6M5 8.25h6M5 10.75h4"
-        stroke="currentColor"
+        d="M5 5.8H11M5 8.2H11M5 10.6H8.8"
+        stroke={spec.primary}
         strokeWidth="1.3"
         strokeLinecap="round"
       />

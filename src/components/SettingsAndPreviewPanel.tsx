@@ -15,9 +15,12 @@ import {
   PageOrientation,
   PageSizePreset,
   StitchDirection,
+  StudioThemeId,
 } from '../types/merger';
+import { ThemeIcon } from './ThemeIcon';
 
 interface SettingsAndPreviewPanelProps {
+  activeThemeId?: StudioThemeId;
   settings: MergeSettings;
   onUpdateSettings: (patch: Partial<MergeSettings>) => void;
   previewPages: string[];
@@ -33,6 +36,7 @@ interface SettingsAndPreviewPanelProps {
 }
 
 export const SettingsAndPreviewPanel: React.FC<SettingsAndPreviewPanelProps> = ({
+  activeThemeId = 'swiss-zinc',
   settings,
   onUpdateSettings,
   previewPages,
@@ -82,7 +86,7 @@ export const SettingsAndPreviewPanel: React.FC<SettingsAndPreviewPanelProps> = (
                 : 'text-zinc-600 hover:text-zinc-900'
             }`}
           >
-            <Eye className="w-3.5 h-3.5" aria-hidden="true" />
+            <ThemeIcon themeId={activeThemeId} role="preview" className="w-3.5 h-3.5 shrink-0" />
             <span>Live Preview</span>
           </button>
           <button
@@ -94,7 +98,7 @@ export const SettingsAndPreviewPanel: React.FC<SettingsAndPreviewPanelProps> = (
                 : 'text-zinc-600 hover:text-zinc-900'
             }`}
           >
-            <Sliders className="w-3.5 h-3.5" aria-hidden="true" />
+            <ThemeIcon themeId={activeThemeId} role="parameters" className="w-3.5 h-3.5 shrink-0" />
             <span>Output Parameters</span>
           </button>
         </div>
@@ -449,13 +453,13 @@ export const SettingsAndPreviewPanel: React.FC<SettingsAndPreviewPanelProps> = (
           type="button"
           onClick={onExecuteMerge}
           disabled={totalFiles === 0 || isMerging}
-          className="w-full flex items-center justify-center gap-2 py-2 px-3.5 text-xs font-semibold text-white bg-zinc-900 rounded-md hover:bg-zinc-800 active:scale-[0.99] disabled:bg-zinc-200 disabled:text-zinc-500 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed"
+          className="w-full flex items-center justify-center gap-2 py-2 px-3.5 text-xs font-semibold rounded-md active:scale-[0.99] disabled:bg-zinc-200 disabled:text-zinc-500 transition-all duration-150 cursor-pointer disabled:cursor-not-allowed studio-accent-btn"
         >
-          <Download className="w-3.5 h-3.5" aria-hidden="true" />
+          <ThemeIcon themeId={activeThemeId} role="merge" className="w-4 h-4 shrink-0" />
           <span>
             {isMerging
               ? 'Merging Files...'
-              : `Export ${
+              : `Merge & Export ${
                   settings.outputFormat === 'pdf'
                     ? 'Unified PDF'
                     : settings.outputFormat === 'zip-bundle'

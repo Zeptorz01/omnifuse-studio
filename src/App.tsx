@@ -6,35 +6,55 @@ import {
   Download,
   FilePlus2,
   FolderOpen,
+  HelpCircle,
   Layers,
   Maximize2,
+  Moon,
+  Palette,
   RotateCw,
+  Settings,
+  Sun,
   Trash2,
 } from 'lucide-react';
 import { ActiveTab, TopBar } from './components/TopBar';
+import { ThemeIcon } from './components/ThemeIcon';
 import { FileQueuePanel } from './components/FileQueuePanel';
 import { SettingsAndPreviewPanel } from './components/SettingsAndPreviewPanel';
 import { NoteComposerModal } from './components/NoteComposerModal';
 import { ExportResultModal } from './components/ExportResultModal';
 import { QuickLookModal } from './components/QuickLookModal';
+import { TutorialModal } from './components/TutorialModal';
+import { SettingsModal } from './components/SettingsModal';
+import { DuplicateFileModal } from './components/DuplicateFileModal';
 import {
+  DuplicateFileConflict,
   ExportHistoryItem,
   FileCategory,
   ImageFitMode,
   MergeFileItem,
   MergeSettings,
+  StudioAppPreferences,
+  StudioThemeId,
   WorkspacePreset,
 } from './types/merger';
 import {
+  DEFAULT_BATCH_SIZE,
   DEFAULT_MERGE_SETTINGS,
+  DEFAULT_STUDIO_PREFERENCES,
   MAX_QUEUE_FILES,
+  STUDIO_THEMES,
   WORKSPACE_PRESETS,
   calculateQueueMetrics,
+  clampBatchCount,
   enforceQueueLimit,
   filterQueueItems,
+  findDuplicateQueueConflicts,
   formatFileSize,
+  getStudioThemeById,
   moveQueueItem,
   parsePageRange,
+  resolveDuplicateAddAgain,
+  resolveDuplicateRemoveFirstAndAdd,
   rotateClockwise,
   sortQueueItems,
 } from './utils/mergeLogic';
@@ -63,9 +83,31 @@ export default function App() {
 
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [isQuickLookOpen, setIsQuickLookOpen] = useState(false);
+  const [isTutorialOpen, setIsTutorialOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isThemePopoverOpen, setIsThemePopoverOpen] = useState(false);
+  const [preferences, setPreferences] = useState<StudioAppPreferences>(
+    DEFAULT_STUDIO_PREFERENCES
+  );
   const [latestExportResult, setLatestExportResult] = useState<ExportHistoryItem | null>(null);
   const [exportHistory, setExportHistory] = useState<ExportHistoryItem[]>([]);
   const [statusBanner, setStatusBanner] = useState<string>('');
+  const [pendingDuplicateState, setPendingDuplicateState] = useState<{
+    conflicts: DuplicateFileConflict[];
+    incomingItems: MergeFileItem[];
+  } | null>(null);
+
+  const handleUpdatePreferences = useCallback((patch: Partial<StudioAppPreferences>) => {
+    setPreferences((prev) => ({ ...prev, ...patch }));
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', preferences.themeId);
+    document.documentElement.setAttribute(
+      'data-mode',
+      preferences.darkMode ? 'dark' : 'light'
+    );
+  }, [preferences.themeId, preferences.darkMode]);
 
   const handleLoadSampleBundle = useCallback(async () => {
     const sampleItems = await createSampleBundle();
@@ -75,18 +117,26 @@ export default function App() {
     setStatusBanner(`Loaded 4 sample files into queue (up to ${MAX_QUEUE_FILES} files max, no page limit).`);
   }, []);
 
-  const handleLoadExtendedBatch = useCallback(async () => {
-    const batchItems = await createExtendedSampleBatch();
-    setItems(batchItems);
-    setSelectedItemId(batchItems[0]?.id ?? null);
-    setActivePreviewPageIndex(0);
-    setStatusBanner(
-      `Loaded 12 multi-format files into queue (up to ${MAX_QUEUE_FILES} files max, unlimited pages per file).`
-    );
-  }, []);
+  const handleLoadExtendedBatch = useCallback(
+    async (targetCount?: number) => {
+      const resolvedCount = clampBatchCount(
+        typeof targetCount === 'number' ? targetCount : DEFAULT_BATCH_SIZE,
+        MAX_QUEUE_FILES
+      );
+      setPreferences((prev) => ({ ...prev, batchSize: resolvedCount }));
+      const batchItems = await createExtendedSampleBatch(resolvedCount);
+      setItems(batchItems);
+      setSelectedItemId(batchItems[0]?.id ?? null);
+      setActivePreviewPageIndex(0);
+      setStatusBanner(
+        `Loaded ${batchItems.length}-file batch into queue (${batchItems.length}/${MAX_QUEUE_FILES} files, unlimited pages per file).`
+      );
+    },
+    []
+  );
 
   useEffect(() => {
-    handleLoadExtendedBatch();
+    handleLoadExtendedBatch(DEFAULT_BATCH_SIZE);
   }, [handleLoadExtendedBatch]);
 
   useEffect(() => {
@@ -166,23 +216,45 @@ export default function App() {
     setSettings((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  const handleAddFiles = useCallback(async (fileList: FileList | File[]) => {
-    const arr = Array.from(fileList);
-    if (arr.length === 0) return;
-    const parsed: MergeFileItem[] = [];
-    for (const f of arr) {
-      try {
-        const item = await parseUploadedFile(f);
-        parsed.push(item);
-      } catch {
-        // Ignore unreadable file
+  const queueIncomingItemsWithDuplicateCheck = useCallback(
+    (incoming: MergeFileItem[]) => {
+      if (incoming.length === 0) return;
+
+      // Also check if the user selected the same file twice within the incoming batch itself
+      const seenNames = new Map<string, MergeFileItem>();
+      const internalConflicts: DuplicateFileConflict[] = [];
+      incoming.forEach((inc, idx) => {
+        const key = inc.name.trim().toLowerCase();
+        const prevInBatch = seenNames.get(key);
+        if (prevInBatch) {
+          internalConflicts.push({
+            existingItem: prevInBatch,
+            existingIndex: items.length + idx - 1,
+            incomingItem: inc,
+          });
+        } else {
+          seenNames.set(key, inc);
+        }
+      });
+
+      const { conflicts, hasDuplicates } = findDuplicateQueueConflicts(items, incoming);
+      const allConflicts = [...conflicts, ...internalConflicts];
+
+      if (hasDuplicates || allConflicts.length > 0) {
+        setPendingDuplicateState({
+          conflicts: allConflicts,
+          incomingItems: incoming,
+        });
+        setStatusBanner(
+          `Duplicate file detected: You have added "${allConflicts[0].incomingItem.name}" twice.`
+        );
+        return;
       }
-    }
-    if (parsed.length > 0) {
+
       setItems((prev) => {
         const { nextItems, addedCount, rejectedCount } = enforceQueueLimit(
           prev,
-          parsed,
+          incoming,
           MAX_QUEUE_FILES
         );
         if (rejectedCount > 0 && addedCount === 0) {
@@ -200,27 +272,87 @@ export default function App() {
         }
         return nextItems;
       });
-      setSelectedItemId(parsed[0].id);
-    }
-  }, []);
+      setSelectedItemId(incoming[0].id);
+    },
+    [items]
+  );
 
-  const handleAddCustomNote = useCallback((title: string, content: string) => {
-    const newItem = createCustomTextDocumentItem(title, content);
+  const handleResolveDuplicateRemoveFirstAndAdd = useCallback(() => {
+    if (!pendingDuplicateState) return;
+    const { incomingItems, conflicts } = pendingDuplicateState;
+    const primaryName = conflicts[0]?.incomingItem.name || 'file';
+
     setItems((prev) => {
-      const { nextItems, addedCount } = enforceQueueLimit(prev, [newItem], MAX_QUEUE_FILES);
+      const { nextItems, addedCount } = resolveDuplicateRemoveFirstAndAdd(
+        prev,
+        incomingItems,
+        MAX_QUEUE_FILES
+      );
+      setStatusBanner(
+        `Removed the first "${primaryName}" and added the new file (${nextItems.length}/${MAX_QUEUE_FILES} files in queue).`
+      );
+      if (addedCount > 0 && incomingItems[0]) {
+        setSelectedItemId(incomingItems[0].id);
+      }
+      return nextItems;
+    });
+    setPendingDuplicateState(null);
+  }, [pendingDuplicateState]);
+
+  const handleResolveDuplicateAddAgain = useCallback(() => {
+    if (!pendingDuplicateState) return;
+    const { incomingItems, conflicts } = pendingDuplicateState;
+    const primaryName = conflicts[0]?.incomingItem.name || 'file';
+
+    setItems((prev) => {
+      const { nextItems, addedCount } = resolveDuplicateAddAgain(
+        prev,
+        incomingItems,
+        MAX_QUEUE_FILES
+      );
       if (addedCount === 0) {
         setStatusBanner(
           `Queue limit reached: Maximum ${MAX_QUEUE_FILES} files can be merged into 1 document.`
         );
-        return prev;
+      } else {
+        setStatusBanner(
+          `Added "${primaryName}" again (${nextItems.length}/${MAX_QUEUE_FILES} files in queue).`
+        );
+        const lastAdded = nextItems[nextItems.length - 1];
+        if (lastAdded) setSelectedItemId(lastAdded.id);
       }
-      setSelectedItemId(newItem.id);
-      setStatusBanner(
-        `Added formatted text page "${newItem.name}" (${nextItems.length}/${MAX_QUEUE_FILES} files).`
-      );
       return nextItems;
     });
-  }, []);
+    setPendingDuplicateState(null);
+  }, [pendingDuplicateState]);
+
+  const handleAddFiles = useCallback(
+    async (fileList: FileList | File[]) => {
+      const arr = Array.from(fileList);
+      if (arr.length === 0) return;
+      const parsed: MergeFileItem[] = [];
+      for (const f of arr) {
+        try {
+          const item = await parseUploadedFile(f);
+          parsed.push(item);
+        } catch {
+          // Ignore unreadable file
+        }
+      }
+      if (parsed.length > 0) {
+        queueIncomingItemsWithDuplicateCheck(parsed);
+      }
+    },
+    [queueIncomingItemsWithDuplicateCheck]
+  );
+
+  const handleAddCustomNote = useCallback(
+    (title: string, content: string) => {
+      const newItem = createCustomTextDocumentItem(title, content);
+      queueIncomingItemsWithDuplicateCheck([newItem]);
+    },
+    [queueIncomingItemsWithDuplicateCheck]
+  );
 
   const handleMoveItem = useCallback((index: number, direction: 'up' | 'down') => {
     const targetIndex = direction === 'up' ? index - 1 : index + 1;
@@ -247,31 +379,20 @@ export default function App() {
     setStatusBanner(`Renamed file to "${newName}".`);
   }, []);
 
-  const handleDuplicateItem = useCallback((id: string) => {
-    setItems((prev) => {
-      if (prev.length >= MAX_QUEUE_FILES) {
-        setStatusBanner(
-          `Queue limit reached: Maximum ${MAX_QUEUE_FILES} files can be merged into 1 document.`
-        );
-        return prev;
-      }
-      const idx = prev.findIndex((item) => item.id === id);
-      if (idx === -1) return prev;
-      const source = prev[idx];
-      const copy: MergeFileItem = {
+  const handleDuplicateItem = useCallback(
+    (id: string) => {
+      const source = items.find((item) => item.id === id);
+      if (!source) return;
+      const sameFileAttempt: MergeFileItem = {
         ...source,
-        id: `${source.id}-copy-${Date.now()}`,
-        name: `Copy_of_${source.name}`,
+        id: `${source.id}-readd-${Date.now()}`,
+        name: source.name,
         addedAt: Date.now(),
       };
-      const next = [...prev];
-      next.splice(idx + 1, 0, copy);
-      setStatusBanner(
-        `Duplicated "${source.name}" (${next.length}/${MAX_QUEUE_FILES} files in queue).`
-      );
-      return next;
-    });
-  }, []);
+      queueIncomingItemsWithDuplicateCheck([sameFileAttempt]);
+    },
+    [items, queueIncomingItemsWithDuplicateCheck]
+  );
 
   const handleRemoveItem = useCallback((id: string) => {
     setItems((prev) => prev.filter((item) => item.id !== id));
@@ -334,7 +455,7 @@ export default function App() {
     }
   }, [items, settings, isMerging]);
 
-  // Desktop keyboard shortcuts (R to rotate selected file)
+  // Desktop keyboard shortcuts (R to rotate selected file, ? to open Tutorial)
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       const tag = (e.target as HTMLElement)?.tagName;
@@ -342,6 +463,11 @@ export default function App() {
       if ((e.key === 'r' || e.key === 'R') && !e.metaKey && !e.ctrlKey && selectedItemId) {
         e.preventDefault();
         handleRotateItem(selectedItemId);
+      } else if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
+        e.preventDefault();
+        setIsSettingsOpen(false);
+        setIsThemePopoverOpen(false);
+        setIsTutorialOpen((prev) => !prev);
       }
     };
     window.addEventListener('keydown', onKeyDown);
@@ -353,23 +479,39 @@ export default function App() {
     [items, selectedItemId]
   );
 
+  const activeTheme = useMemo(
+    () => getStudioThemeById(preferences.themeId),
+    [preferences.themeId]
+  );
+
   return (
-    <div className="min-h-screen flex flex-col bg-[#F4F4F5] text-zinc-900">
-      {/* 3-Zone Top Bar */}
+    <div
+      data-theme={preferences.themeId}
+      data-mode={preferences.darkMode ? 'dark' : 'light'}
+      className="min-h-screen flex flex-col studio-canvas-bg text-zinc-900 transition-colors duration-200"
+    >
+      {/* 3-Zone Top Bar with Corner Settings Button */}
       <TopBar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         onTriggerMerge={handleExecuteMerge}
+        onOpenSettings={() => {
+          setIsTutorialOpen(false);
+          setIsThemePopoverOpen(false);
+          setIsSettingsOpen(true);
+        }}
+        activeThemeId={preferences.themeId}
+        appIconId={preferences.appIconId}
         canMerge={items.length > 0}
         isMerging={isMerging}
         fileCount={items.length}
       />
 
-      {/* Compact Desktop Summary Strip */}
+      {/* Compact Desktop Summary Strip + Theme & Settings Controls */}
       <div
         role="region"
-        aria-label="Workspace Summary Metrics"
-        className="bg-white border-b border-zinc-200"
+        aria-label="Workspace Summary Metrics and Appearance Controls"
+        className="bg-white border-b border-zinc-200 relative z-30"
       >
         <div className="max-w-[1440px] mx-auto px-4 sm:px-5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-600 font-mono tabular-nums">
           <div className="flex flex-wrap items-center gap-2">
@@ -396,8 +538,9 @@ export default function App() {
             </span>
           </div>
 
-          <span className="font-sans text-zinc-500 truncate max-w-md">
-            {statusBanner || 'Ready to combine up to 20 documents and images'}
+          {/* Clean Status Readout (All Appearance, Theme & Guide Controls Consolidated in Corner Settings) */}
+          <span className="text-zinc-500 font-sans truncate max-w-md ml-auto hidden md:inline">
+            {statusBanner || `Active Theme: ${activeTheme.name} · Ready to merge up to ${MAX_QUEUE_FILES} files`}
           </span>
         </div>
       </div>
@@ -408,6 +551,9 @@ export default function App() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
             <div className="lg:col-span-8">
               <FileQueuePanel
+                activeThemeId={preferences.themeId}
+                appIconId={preferences.appIconId}
+                batchCount={preferences.batchSize}
                 items={items}
                 filteredItems={filteredItems}
                 selectedItemId={selectedItemId}
@@ -440,6 +586,7 @@ export default function App() {
 
             <div className="lg:col-span-4">
               <SettingsAndPreviewPanel
+                activeThemeId={preferences.themeId}
                 settings={settings}
                 onUpdateSettings={handleUpdateSettings}
                 previewPages={previewPages}
@@ -463,13 +610,20 @@ export default function App() {
             className="bg-white border border-zinc-200 rounded-lg p-5 space-y-4"
           >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-3.5">
-              <div>
-                <h1 className="text-sm font-bold text-zinc-900">
-                  Visual Page Composer & Sheet Lightbox
-                </h1>
-                <p className="text-xs text-zinc-500 mt-0.5">
-                  Inspect all {previewPages.length} compiled output sheets side-by-side and fine-tune item orientation or order before exporting.
-                </p>
+              <div className="flex items-center gap-2.5">
+                <ThemeIcon
+                  themeId={preferences.themeId}
+                  role="composer"
+                  className="w-5 h-5 shrink-0"
+                />
+                <div>
+                  <h1 className="text-sm font-bold text-zinc-900">
+                    Visual Page Composer & Sheet Lightbox
+                  </h1>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Inspect all {previewPages.length} compiled output sheets side-by-side and fine-tune item orientation or order before exporting.
+                  </p>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <button
@@ -477,17 +631,25 @@ export default function App() {
                   onClick={() => setIsNoteModalOpen(true)}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-zinc-700 bg-zinc-100 hover:bg-zinc-200 rounded cursor-pointer"
                 >
-                  <FilePlus2 className="w-3.5 h-3.5" aria-hidden="true" />
+                  <ThemeIcon
+                    themeId={preferences.themeId}
+                    role="note"
+                    className="w-3.5 h-3.5 shrink-0"
+                  />
                   <span>Insert Text Page</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleExecuteMerge}
                   disabled={items.length === 0 || isMerging}
-                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 rounded cursor-pointer disabled:opacity-40"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded cursor-pointer disabled:opacity-40 studio-accent-btn"
                 >
-                  <Download className="w-3.5 h-3.5" aria-hidden="true" />
-                  <span>Export Unified File</span>
+                  <ThemeIcon
+                    themeId={preferences.themeId}
+                    role="merge"
+                    className="w-3.5 h-3.5 shrink-0"
+                  />
+                  <span>Merge & Export Unified File</span>
                 </button>
               </div>
             </div>
@@ -595,13 +757,20 @@ export default function App() {
             aria-label="Document Conversion Presets"
             className="bg-white border border-zinc-200 rounded-lg p-5 space-y-4"
           >
-            <div className="border-b border-zinc-200 pb-3.5">
-              <h1 className="text-sm font-bold text-zinc-900">
-                One-Click Conversion & Packaging Presets
-              </h1>
-              <p className="text-xs text-zinc-500 mt-0.5">
-                Select a domain workflow profile to configure target format, page geometry, margins, cover index, and watermarks automatically.
-              </p>
+            <div className="flex items-center gap-2.5 border-b border-zinc-200 pb-3.5">
+              <ThemeIcon
+                themeId={preferences.themeId}
+                role="presets"
+                className="w-5 h-5 shrink-0"
+              />
+              <div>
+                <h1 className="text-sm font-bold text-zinc-900">
+                  One-Click Conversion & Packaging Presets
+                </h1>
+                <p className="text-xs text-zinc-500 mt-0.5">
+                  Select a domain workflow profile to configure target format, page geometry, margins, cover index, and watermarks automatically.
+                </p>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -646,7 +815,7 @@ export default function App() {
                           handleApplyPreset(preset);
                           setActiveTab('workspace');
                         }}
-                        className="w-full py-1.5 px-3 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 rounded transition-colors cursor-pointer"
+                        className="w-full py-1.5 px-3 text-xs font-semibold rounded transition-colors cursor-pointer studio-accent-btn"
                       >
                         Apply Preset & Open Workspace
                       </button>
@@ -664,21 +833,33 @@ export default function App() {
             className="bg-white border border-zinc-200 rounded-lg p-5 space-y-4"
           >
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-3.5">
-              <div>
-                <h1 className="text-sm font-bold text-zinc-900">
-                  Compiled Document Export History
-                </h1>
-                <p className="text-xs text-zinc-500 mt-0.5">
-                  Re-download or inspect any unified PDF, stitched image, or ZIP bundle compiled during this session.
-                </p>
+              <div className="flex items-center gap-2.5">
+                <ThemeIcon
+                  themeId={preferences.themeId}
+                  role="history"
+                  className="w-5 h-5 shrink-0"
+                />
+                <div>
+                  <h1 className="text-sm font-bold text-zinc-900">
+                    Compiled Document Export History
+                  </h1>
+                  <p className="text-xs text-zinc-500 mt-0.5">
+                    Re-download or inspect any unified PDF, stitched image, or ZIP bundle compiled during this session.
+                  </p>
+                </div>
               </div>
               {exportHistory.length === 0 && items.length > 0 && (
                 <button
                   type="button"
                   onClick={handleExecuteMerge}
-                  className="px-3.5 py-1.5 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 rounded cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-semibold rounded cursor-pointer studio-accent-btn"
                 >
-                  Compile Current Queue Now
+                  <ThemeIcon
+                    themeId={preferences.themeId}
+                    role="merge"
+                    className="w-3.5 h-3.5 shrink-0"
+                  />
+                  <span>Merge Current Queue Now</span>
                 </button>
               )}
             </div>
@@ -758,6 +939,49 @@ export default function App() {
       <ExportResultModal
         result={latestExportResult}
         onClose={() => setLatestExportResult(null)}
+      />
+
+      <DuplicateFileModal
+        isOpen={pendingDuplicateState !== null}
+        conflicts={pendingDuplicateState?.conflicts ?? []}
+        incomingItems={pendingDuplicateState?.incomingItems ?? []}
+        activeThemeId={preferences.themeId}
+        onRemoveFirstAndAddThisOne={handleResolveDuplicateRemoveFirstAndAdd}
+        onAddSameFileAgain={handleResolveDuplicateAddAgain}
+        onCancel={() => setPendingDuplicateState(null)}
+      />
+
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+        onOpenTutorial={() => {
+          setIsSettingsOpen(false);
+          setIsThemePopoverOpen(false);
+          setIsTutorialOpen(true);
+        }}
+        preferences={preferences}
+        onUpdatePreferences={handleUpdatePreferences}
+        mergeSettings={settings}
+        onUpdateMergeSettings={handleUpdateSettings}
+      />
+
+      <TutorialModal
+        isOpen={isTutorialOpen}
+        onClose={() => setIsTutorialOpen(false)}
+        onOpenSettings={() => {
+          setIsTutorialOpen(false);
+          setIsThemePopoverOpen(false);
+          setIsSettingsOpen(true);
+        }}
+        onLoadExtendedBatch={handleLoadExtendedBatch}
+        onLoadSampleBundle={handleLoadSampleBundle}
+        onTriggerMerge={handleExecuteMerge}
+        onSwitchToComposer={() => setActiveTab('composer')}
+        onApplyPreset={handleApplyPreset}
+        preferences={preferences}
+        onUpdatePreferences={handleUpdatePreferences}
+        currentFileCount={items.length}
+        currentTotalPages={metrics.totalSelectedPages}
       />
     </div>
   );

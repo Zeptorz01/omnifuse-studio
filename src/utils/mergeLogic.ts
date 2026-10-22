@@ -1,4 +1,5 @@
 import {
+  DuplicateFileConflict,
   FileCategory,
   ImageFitMode,
   MarginPreset,
@@ -7,10 +8,283 @@ import {
   PageOrientation,
   PageSizePreset,
   RotationAngle,
+  StudioAppIconId,
+  StudioAppIconOption,
+  StudioAppPreferences,
+  StudioTheme,
+  StudioThemeId,
   WorkspacePreset,
 } from '../types/merger';
 
-export const MAX_QUEUE_FILES = 20;
+export const MAX_QUEUE_FILES = 50;
+export const DEFAULT_BATCH_SIZE = 12;
+
+export const DEFAULT_STUDIO_PREFERENCES: StudioAppPreferences = {
+  darkMode: false,
+  themeId: 'classic-layers',
+  appIconId: 'classic-layers',
+  batchSize: DEFAULT_BATCH_SIZE,
+  compactRows: false,
+  autoOpenExportModal: true,
+  showKeyboardHints: true,
+};
+
+export const STUDIO_APP_ICONS: StudioAppIconOption[] = [
+  {
+    id: 'classic-layers',
+    name: 'Original OmniFuse Stack',
+    badgeLabel: 'Default Logo',
+    description: 'Classic isometric document stack with emerald fusion badge',
+  },
+  {
+    id: 'swiss-zinc',
+    name: 'Isometric Prism',
+    badgeLabel: 'Swiss Zinc',
+    description: 'Monochrome slate squircle with precision layered prism',
+  },
+  {
+    id: 'midnight-carbon',
+    name: 'Cyber Crescent',
+    badgeLabel: 'Carbon',
+    description: 'Obsidian octagon emblem with electric emerald core',
+  },
+  {
+    id: 'nordic-frost',
+    name: 'Arctic Crystal',
+    badgeLabel: 'Nordic CAD',
+    description: 'Hexagonal blueprint crystal with cobalt sapphire frame',
+  },
+  {
+    id: 'amber-darkroom',
+    name: 'Solar Aperture',
+    badgeLabel: 'Darkroom',
+    description: 'Circular optical lens emblem with warm amber rings',
+  },
+  {
+    id: 'emerald-terminal',
+    name: 'Origami Leaf',
+    badgeLabel: 'Botanical',
+    description: 'Organic forest-emerald badge with folded vector leaf',
+  },
+  {
+    id: 'amethyst-pro',
+    name: 'Faceted Gem',
+    badgeLabel: 'Amethyst',
+    description: 'Diamond-cut royal violet jewel with luminous core',
+  },
+  {
+    id: 'crimson-velvet',
+    name: 'Ruby Flame',
+    badgeLabel: 'Crimson',
+    description: 'Crested ruby-crimson shield with high-contrast core',
+  },
+  {
+    id: 'ocean-abyss',
+    name: 'Nautilus Compass',
+    badgeLabel: 'Lagoon',
+    description: 'Deep-sea cyan porthole with cardinal compass crosshairs',
+  },
+  {
+    id: 'cyber-gold',
+    name: 'Solar Astrolabe',
+    badgeLabel: '24K Gold',
+    description: 'Beveled 24K gold medallion on obsidian-bronze crest',
+  },
+  {
+    id: 'sakura-neon',
+    name: 'Sakura Bloom',
+    badgeLabel: 'Sakura',
+    description: 'Magenta-rose blossom badge with crisp studio geometry',
+  },
+];
+
+export function getStudioAppIconById(iconId: StudioAppIconId): StudioAppIconOption {
+  return STUDIO_APP_ICONS.find((i) => i.id === iconId) || STUDIO_APP_ICONS[0];
+}
+
+/**
+ * Updates the active studio theme (and optional dark mode) while strictly preserving
+ * the user's current `appIconId` so the app logo never changes when switching themes.
+ */
+export function applyThemeWithoutChangingAppIcon(
+  current: StudioAppPreferences,
+  themeId: StudioThemeId,
+  recommendedDark?: boolean
+): StudioAppPreferences {
+  return {
+    ...current,
+    themeId,
+    darkMode: recommendedDark !== undefined ? recommendedDark : current.darkMode,
+    appIconId: current.appIconId,
+  };
+}
+
+export function clampBatchCount(count: number, maxFiles = MAX_QUEUE_FILES): number {
+  if (!Number.isFinite(count)) return DEFAULT_BATCH_SIZE;
+  return Math.max(1, Math.min(maxFiles, Math.round(count)));
+}
+
+export function stepBatchCount(
+  currentCount: number,
+  delta: number,
+  maxFiles = MAX_QUEUE_FILES
+): number {
+  return clampBatchCount(currentCount + delta, maxFiles);
+}
+
+export function cycleBatchPresetCount(
+  currentCount: number,
+  maxFiles = MAX_QUEUE_FILES
+): number {
+  const tiers = [4, 12, 20, 35, maxFiles];
+  for (const tier of tiers) {
+    if (currentCount < tier) {
+      return tier;
+    }
+  }
+  return tiers[0];
+}
+
+export const STUDIO_THEMES: StudioTheme[] = [
+  {
+    id: 'classic-layers',
+    name: 'Original OmniFuse',
+    iconLabel: 'Classic Stack',
+    tagline: 'Original studio slate & emerald fusion workspace with classic layer icons',
+    swatches: {
+      canvas: '#F4F4F5',
+      surface: '#FFFFFF',
+      accent: '#059669',
+      border: '#D4D4D8',
+    },
+  },
+  {
+    id: 'swiss-zinc',
+    name: 'Swiss Zinc',
+    iconLabel: 'Isometric Prism',
+    tagline: 'Architectural monochrome slate with crisp studio contrast',
+    swatches: {
+      canvas: '#F4F4F5',
+      surface: '#FFFFFF',
+      accent: '#18181B',
+      border: '#E4E4E7',
+    },
+  },
+  {
+    id: 'midnight-carbon',
+    name: 'Midnight Carbon',
+    iconLabel: 'Cyber Crescent',
+    tagline: 'Deep obsidian carbon console with electric emerald highlights',
+    recommendedDark: true,
+    swatches: {
+      canvas: '#09090B',
+      surface: '#121316',
+      accent: '#10B981',
+      border: '#27272A',
+    },
+  },
+  {
+    id: 'nordic-frost',
+    name: 'Nordic Frost CAD',
+    iconLabel: 'Arctic Crystal',
+    tagline: 'Arctic blueprint slate with precision cobalt sapphire controls',
+    swatches: {
+      canvas: '#EBF3FA',
+      surface: '#FFFFFF',
+      accent: '#2563EB',
+      border: '#BFDBFE',
+    },
+  },
+  {
+    id: 'amber-darkroom',
+    name: 'Solar Darkroom',
+    iconLabel: 'Solar Aperture',
+    tagline: 'Warm titanium hardware with international orange-amber accents',
+    swatches: {
+      canvas: '#F6F2EA',
+      surface: '#FFFFFF',
+      accent: '#EA580C',
+      border: '#FED7AA',
+    },
+  },
+  {
+    id: 'emerald-terminal',
+    name: 'Botanical Lab',
+    iconLabel: 'Origami Leaf',
+    tagline: 'Mineral sage workspace with deep forest emerald actions',
+    swatches: {
+      canvas: '#EAF5EF',
+      surface: '#FFFFFF',
+      accent: '#059669',
+      border: '#A7F3D0',
+    },
+  },
+  {
+    id: 'amethyst-pro',
+    name: 'Royal Amethyst',
+    iconLabel: 'Faceted Gem',
+    tagline: 'Precision lavender quartz with royal violet CAD accents',
+    swatches: {
+      canvas: '#F2EEFA',
+      surface: '#FFFFFF',
+      accent: '#7C3AED',
+      border: '#DDD6FE',
+    },
+  },
+  {
+    id: 'crimson-velvet',
+    name: 'Crimson Forge',
+    iconLabel: 'Ruby Flame',
+    tagline: 'Warm rose-ivory studio with striking ruby-crimson highlights',
+    swatches: {
+      canvas: '#FAF0F2',
+      surface: '#FFFFFF',
+      accent: '#E11D48',
+      border: '#FECDD3',
+    },
+  },
+  {
+    id: 'ocean-abyss',
+    name: 'Pacific Lagoon',
+    iconLabel: 'Nautilus Compass',
+    tagline: 'Seafoam aqua drafting table with deep cyan-teal controls',
+    swatches: {
+      canvas: '#E8F6F8',
+      surface: '#FFFFFF',
+      accent: '#0891B2',
+      border: '#A5F3FC',
+    },
+  },
+  {
+    id: 'cyber-gold',
+    name: 'Aurelia Gold Luxe',
+    iconLabel: 'Solar Astrolabe',
+    tagline: 'Obsidian-bronze console with luminous 24K amber-gold accents',
+    recommendedDark: true,
+    swatches: {
+      canvas: '#12100B',
+      surface: '#1C1914',
+      accent: '#F59E0B',
+      border: '#78350F',
+    },
+  },
+  {
+    id: 'sakura-neon',
+    name: 'Sakura Horizon',
+    iconLabel: 'Sakura Bloom',
+    tagline: 'Soft blush pearl workspace with vibrant magenta-rose accents',
+    swatches: {
+      canvas: '#FAF0F7',
+      surface: '#FFFFFF',
+      accent: '#DB2777',
+      border: '#FBCFE8',
+    },
+  },
+];
+
+export function getStudioThemeById(themeId: StudioThemeId): StudioTheme {
+  return STUDIO_THEMES.find((t) => t.id === themeId) || STUDIO_THEMES[0];
+}
 
 export const DEFAULT_MERGE_SETTINGS: MergeSettings = {
   outputFilename: 'unified-document-package',
@@ -140,6 +414,13 @@ export function parsePageRange(rangeInput: string, totalPages: number): number[]
   const trimmed = (rangeInput || '').trim().toLowerCase();
   if (!trimmed || trimmed === 'all' || trimmed === '*') {
     return Array.from({ length: safeTotal }, (_, i) => i);
+  }
+  if (trimmed === 'odd') {
+    return Array.from({ length: safeTotal }, (_, i) => i).filter((i) => (i + 1) % 2 === 1);
+  }
+  if (trimmed === 'even') {
+    const evens = Array.from({ length: safeTotal }, (_, i) => i).filter((i) => (i + 1) % 2 === 0);
+    return evens.length > 0 ? evens : [0];
   }
 
   const selected = new Set<number>();
@@ -367,4 +648,109 @@ export function enforceQueueLimit<T>(
     limitReached: nextItems.length >= maxFiles || rejectedCount > 0,
   };
 }
+
+function normalizeFileKey(name: string): string {
+  return (name || '').trim().toLowerCase();
+}
+
+/**
+ * Detects if any incoming files have the same filename as files already in the queue
+ * (or appear twice within the incoming batch itself).
+ */
+export function findDuplicateQueueConflicts(
+  existingItems: MergeFileItem[],
+  incomingItems: MergeFileItem[]
+): {
+  conflicts: DuplicateFileConflict[];
+  hasDuplicates: boolean;
+} {
+  const conflicts: DuplicateFileConflict[] = [];
+  for (const inc of incomingItems) {
+    const key = normalizeFileKey(inc.name);
+    const existingIndex = existingItems.findIndex(
+      (item) => normalizeFileKey(item.name) === key
+    );
+    if (existingIndex !== -1) {
+      conflicts.push({
+        existingItem: existingItems[existingIndex],
+        existingIndex,
+        incomingItem: inc,
+      });
+    }
+  }
+
+  return {
+    conflicts,
+    hasDuplicates: conflicts.length > 0,
+  };
+}
+
+/**
+ * Option 1: "Remove the first file and add this one"
+ * Removes the first matching occurrence of each duplicate filename from the existing queue
+ * and appends the newly added file(s), respecting the maximum file limit.
+ */
+export function resolveDuplicateRemoveFirstAndAdd(
+  existingItems: MergeFileItem[],
+  incomingItems: MergeFileItem[],
+  maxFiles = MAX_QUEUE_FILES
+): {
+  nextItems: MergeFileItem[];
+  removedFirstCount: number;
+  addedCount: number;
+  rejectedCount: number;
+} {
+  const remainingExisting = [...existingItems];
+  let removedFirstCount = 0;
+
+  for (const inc of incomingItems) {
+    const key = normalizeFileKey(inc.name);
+    const firstMatchIdx = remainingExisting.findIndex(
+      (item) => normalizeFileKey(item.name) === key
+    );
+    if (firstMatchIdx !== -1) {
+      remainingExisting.splice(firstMatchIdx, 1);
+      removedFirstCount++;
+    }
+  }
+
+  const { nextItems, addedCount, rejectedCount } = enforceQueueLimit(
+    remainingExisting,
+    incomingItems,
+    maxFiles
+  );
+
+  return {
+    nextItems,
+    removedFirstCount,
+    addedCount,
+    rejectedCount,
+  };
+}
+
+/**
+ * Option 2: "Add this same file again"
+ * Keeps the existing file(s) in the queue and appends the same file(s) again
+ * with distinct item IDs so both instances can be merged into one output.
+ */
+export function resolveDuplicateAddAgain(
+  existingItems: MergeFileItem[],
+  incomingItems: MergeFileItem[],
+  maxFiles = MAX_QUEUE_FILES
+): {
+  nextItems: MergeFileItem[];
+  addedCount: number;
+  rejectedCount: number;
+  limitReached: boolean;
+} {
+  const now = Date.now();
+  const clonedIncoming = incomingItems.map((item, idx) => ({
+    ...item,
+    id: `${item.id}-dup-${now}-${idx}`,
+    addedAt: now + idx,
+  }));
+
+  return enforceQueueLimit(existingItems, clonedIncoming, maxFiles);
+}
+
 

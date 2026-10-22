@@ -20,11 +20,25 @@ import {
   FileCategory,
   ImageFitMode,
   MergeFileItem,
+  StudioAppIconId,
+  StudioThemeId,
 } from '../types/merger';
-import { MAX_QUEUE_FILES, formatFileSize, parsePageRange } from '../utils/mergeLogic';
+import {
+  DEFAULT_BATCH_SIZE,
+  MAX_QUEUE_FILES,
+  clampBatchCount,
+  cycleBatchPresetCount,
+  formatFileSize,
+  parsePageRange,
+  stepBatchCount,
+} from '../utils/mergeLogic';
 import { BrandIcon, FormatCategoryIcon } from './BrandIcon';
+import { ThemeIcon } from './ThemeIcon';
 
 interface FileQueuePanelProps {
+  activeThemeId?: StudioThemeId;
+  appIconId?: StudioAppIconId;
+  batchCount?: number;
   items: MergeFileItem[];
   filteredItems: MergeFileItem[];
   selectedItemId: string | null;
@@ -35,7 +49,7 @@ interface FileQueuePanelProps {
   onCategoryFilterChange: (cat: 'all' | FileCategory) => void;
   onAddFiles: (files: FileList | File[]) => void;
   onLoadSampleBundle: () => void;
-  onLoadExtendedBatch: () => void;
+  onLoadExtendedBatch: (targetCount?: number) => void;
   onOpenNoteModal: () => void;
   onClearAll: () => void;
   onMoveItem: (index: number, direction: 'up' | 'down') => void;
@@ -51,6 +65,9 @@ interface FileQueuePanelProps {
 }
 
 export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
+  activeThemeId = 'swiss-zinc',
+  appIconId = 'classic-layers',
+  batchCount = DEFAULT_BATCH_SIZE,
   items,
   filteredItems,
   selectedItemId,
@@ -88,6 +105,22 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
   const [editingName, setEditingName] = useState('');
 
   const isAtMaxCapacity = items.length >= MAX_QUEUE_FILES;
+  const activeBatchCount = clampBatchCount(batchCount, MAX_QUEUE_FILES);
+
+  const handleBatchButtonClick = () => {
+    if (items.length === activeBatchCount) {
+      const nextPresetCount = cycleBatchPresetCount(activeBatchCount, MAX_QUEUE_FILES);
+      onLoadExtendedBatch(nextPresetCount);
+    } else {
+      onLoadExtendedBatch(activeBatchCount);
+    }
+  };
+
+  const handleStepBatch = (e: React.MouseEvent | React.KeyboardEvent, delta: number) => {
+    e.stopPropagation();
+    const nextCount = stepBatchCount(activeBatchCount, delta, MAX_QUEUE_FILES);
+    onLoadExtendedBatch(nextCount);
+  };
 
   const handleDropZone = (e: React.DragEvent) => {
     e.preventDefault();
@@ -144,7 +177,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
       {/* Compact Desktop Queue Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-zinc-50 border-b border-zinc-200 rounded-t-lg">
         <div className="flex items-center gap-2.5">
-          <BrandIcon className="w-5 h-5 shrink-0" />
+          <ThemeIcon themeId={activeThemeId} role="queue" className="w-5 h-5 shrink-0" />
           <div>
             <h1 className="text-sm font-bold text-zinc-900 balance-text leading-tight">
               Source Document & Image Queue
@@ -168,8 +201,8 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
             onClick={() => fileInputRef.current?.click()}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-900 bg-white border border-zinc-300 rounded hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-40 transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed"
           >
-            <Upload className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>{isAtMaxCapacity ? 'Max 20 Reached' : 'Add Files'}</span>
+            <ThemeIcon themeId={activeThemeId} role="upload" className="w-3.5 h-3.5 shrink-0" />
+            <span>{isAtMaxCapacity ? `Max ${MAX_QUEUE_FILES} Reached` : 'Add Files'}</span>
           </button>
 
           <button
@@ -178,17 +211,56 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
             onClick={onOpenNoteModal}
             className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-40 rounded transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed"
           >
-            <FilePlus2 className="w-3.5 h-3.5" aria-hidden="true" />
+            <ThemeIcon themeId={activeThemeId} role="note" className="w-3.5 h-3.5 shrink-0" />
             <span>Add Text Page</span>
           </button>
 
           <button
             type="button"
-            onClick={onLoadExtendedBatch}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] rounded transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+            onClick={handleBatchButtonClick}
+            title={`Click to load/cycle batch size (4, 12, 20, 35, ${MAX_QUEUE_FILES}) or use - / + to count exact batch files (1–${MAX_QUEUE_FILES})`}
+            className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-zinc-800 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] rounded transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
           >
-            <FolderOpen className="w-3.5 h-3.5" aria-hidden="true" />
-            <span>Load 12-File Batch</span>
+            <ThemeIcon themeId={activeThemeId} role="batch" className="w-3.5 h-3.5 shrink-0" />
+            <span>Batch Files</span>
+            <span className="inline-flex items-center gap-1 ml-0.5 pl-1.5 border-l border-zinc-200 font-mono tabular-nums">
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label="Decrease batch file count"
+                onClick={(e) => handleStepBatch(e, -1)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleStepBatch(e, -1);
+                  }
+                }}
+                className="w-4 h-4 inline-flex items-center justify-center rounded-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-[11px] leading-none select-none"
+              >
+                −
+              </span>
+              <span
+                data-testid="batch-button-counter"
+                className="px-1 py-0.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xs"
+              >
+                {activeBatchCount}/{MAX_QUEUE_FILES}
+              </span>
+              <span
+                role="button"
+                tabIndex={0}
+                aria-label="Increase batch file count"
+                onClick={(e) => handleStepBatch(e, 1)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleStepBatch(e, 1);
+                  }
+                }}
+                className="w-4 h-4 inline-flex items-center justify-center rounded-xs bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-bold text-[11px] leading-none select-none"
+              >
+                +
+              </span>
+            </span>
           </button>
 
           {items.length > 0 && (
@@ -305,7 +377,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
       {/* Empty State */}
       {items.length === 0 ? (
         <div className="flex flex-col items-center justify-center text-center px-6 py-12">
-          <BrandIcon className="w-11 h-11 mb-3" />
+          <BrandIcon appIconId={appIconId} className="w-11 h-11 mb-3" />
           <h2 className="text-sm font-semibold text-zinc-900">
             Drop PDFs, JPEGs, PNGs, or text files here to combine
           </h2>
@@ -322,10 +394,10 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
             </button>
             <button
               type="button"
-              onClick={onLoadExtendedBatch}
+              onClick={() => onLoadExtendedBatch(activeBatchCount)}
               className="px-3.5 py-1.5 text-xs font-semibold text-zinc-800 bg-zinc-100 border border-zinc-300 hover:bg-zinc-200 rounded transition-colors cursor-pointer"
             >
-              Load 12-File Batch
+              Load {activeBatchCount}-File Batch
             </button>
             <button
               type="button"
@@ -465,6 +537,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                       <div className="flex items-center gap-1.5">
                         <FormatCategoryIcon
                           category={item.category}
+                          themeId={activeThemeId}
                           className="w-3.5 h-3.5 text-zinc-500 shrink-0"
                         />
                         <p
@@ -603,7 +676,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                       title={
                         isAtMaxCapacity
                           ? `Maximum limit of ${MAX_QUEUE_FILES} files reached`
-                          : `Duplicate '${item.name}'`
+                          : `Add '${item.name}' again (triggers Duplicate File Detector)`
                       }
                       aria-label={`Duplicate '${item.name}'`}
                       className="p-1 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-200/60 disabled:opacity-30 rounded transition-colors cursor-pointer disabled:cursor-not-allowed"
@@ -671,6 +744,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <FormatCategoryIcon
                         category={item.category}
+                        themeId={activeThemeId}
                         className="w-3.5 h-3.5 text-zinc-500 shrink-0"
                       />
                       <p className="text-xs font-semibold text-zinc-900 truncate">

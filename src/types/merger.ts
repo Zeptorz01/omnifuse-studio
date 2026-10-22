@@ -70,3 +70,58 @@ export interface WorkspacePreset {
   targetUse: string;
   settings: Partial<MergeSettings>;
 }
+
+export type StudioThemeId =
+  | 'classic-layers'
+  | 'swiss-zinc'
+  | 'midnight-carbon'
+  | 'nordic-frost'
+  | 'amber-darkroom'
+  | 'emerald-terminal'
+  | 'amethyst-pro'
+  | 'crimson-velvet'
+  | 'ocean-abyss'
+  | 'cyber-gold'
+  | 'sakura-neon';
+
+export type StudioAppIconId = StudioThemeId;
+
+export interface DuplicateFileConflict {
+  existingItem: MergeFileItem;
+  existingIndex: number;
+  incomingItem: MergeFileItem;
+}
+
+export interface StudioAppIconOption {
+  id: StudioAppIconId;
+  name: string;
+  badgeLabel: string;
+  description: string;
+}
+
+export interface StudioTheme {
+  id: StudioThemeId;
+  name: string;
+  iconLabel: string;
+  tagline: string;
+  recommendedDark?: boolean;
+  swatches: {
+    canvas: string;
+    surface: string;
+    accent: string;
+    border: string;
+  };
+}
+
+export interface StudioAppPreferences {
+  darkMode: boolean;
+  themeId: StudioThemeId;
+  appIconId: StudioAppIconId;
+  batchSize: number;
+  compactRows: boolean;
+  autoOpenExportModal: boolean;
+  showKeyboardHints: boolean;
+}
+
+
+

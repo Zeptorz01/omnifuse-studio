@@ -572,152 +572,353 @@ async function generateMultiPagePdfDocument(
   return { bytes, thumb };
 }
 
+let cachedBatchPool50: MergeFileItem[] | null = null;
+
 /**
- * Generates a 12-file multi-format batch (with multi-page PDFs up to 6 pages each)
- * so users can test merging >10 files (up to 20 max) with unlimited pages per file.
+ * Generates a countable multi-format batch (from 1 up to 50 files, default 12)
+ * with multi-page PDFs (up to 8 pages each), JPEGs, PNGs, and Markdown notes.
+ * Caches the 50-file pool so stepping or counting the batch size is instantaneous.
  */
-export async function createExtendedSampleBatch(): Promise<MergeFileItem[]> {
-  const baseFour = await createSampleBundle();
-  const now = Date.now();
+export async function createExtendedSampleBatch(targetCount = 12): Promise<MergeFileItem[]> {
+  const safeCount = Math.max(1, Math.min(50, Math.round(targetCount)));
 
-  const specPdf = await generateMultiPagePdfDocument(
-    '05_System_Architecture_Spec.pdf',
-    'SPEC-2026-V5',
-    5
-  );
-  const auditPdf = await generateMultiPagePdfDocument(
-    '06_Quarterly_Security_Audit.pdf',
-    'AUD-2026-Q4',
-    4
-  );
-  const compliancePdf = await generateMultiPagePdfDocument(
-    '07_ISO_Compliance_Certificates.pdf',
-    'ISO-9001-CERT',
-    6
-  );
-  const addendumPdf = await generateMultiPagePdfDocument(
-    '08_Vendor_Procurement_Addendum.pdf',
-    'PROC-ADD-08',
-    3
-  );
+  if (!cachedBatchPool50) {
+    const baseFour = await createSampleBundle();
+    const now = Date.now();
 
-  const floorplan = generateSampleFloorplanJpeg();
-  const invoice = generateSampleInvoicePng();
+    const specPdf = await generateMultiPagePdfDocument(
+      '05_System_Architecture_Spec.pdf',
+      'SPEC-2026-V5',
+      5
+    );
+    const auditPdf = await generateMultiPagePdfDocument(
+      '06_Quarterly_Security_Audit.pdf',
+      'AUD-2026-Q4',
+      4
+    );
+    const compliancePdf = await generateMultiPagePdfDocument(
+      '07_ISO_Compliance_Certificates.pdf',
+      'ISO-9001-CERT',
+      6
+    );
+    const addendumPdf = await generateMultiPagePdfDocument(
+      '10_Vendor_Procurement_Addendum.pdf',
+      'PROC-ADD-08',
+      3
+    );
+    const structuralPdf = await generateMultiPagePdfDocument(
+      '13_Structural_Load_Analysis.pdf',
+      'STR-2026-13',
+      7
+    );
+    const environmentalPdf = await generateMultiPagePdfDocument(
+      '15_Environmental_Compliance_Packet.pdf',
+      'ENV-2026-15',
+      5
+    );
+    const bomPdf = await generateMultiPagePdfDocument(
+      '18_Hardware_Bill_Of_Materials.pdf',
+      'BOM-2026-18',
+      4
+    );
+    const boardPdf = await generateMultiPagePdfDocument(
+      '20_Executive_Board_Signoff_Packet.pdf',
+      'BRD-2026-20',
+      8
+    );
 
-  const extraItems: MergeFileItem[] = [
-    {
-      id: `batch-pdf-5-${now}`,
-      name: '05_System_Architecture_Spec.pdf',
-      sizeBytes: specPdf.bytes.byteLength,
-      mimeType: 'application/pdf',
-      category: 'pdf',
-      extension: 'PDF',
-      pageCount: 5,
-      pageRange: 'all',
-      rotation: 0,
-      fitMode: 'contain',
-      addedAt: now + 10,
-      thumbnailDataUrl: specPdf.thumb,
-      rawBytes: specPdf.bytes,
-      width: 595,
-      height: 842,
-    },
-    {
-      id: `batch-pdf-6-${now}`,
-      name: '06_Quarterly_Security_Audit.pdf',
-      sizeBytes: auditPdf.bytes.byteLength,
-      mimeType: 'application/pdf',
-      category: 'pdf',
-      extension: 'PDF',
-      pageCount: 4,
-      pageRange: 'all',
-      rotation: 0,
-      fitMode: 'contain',
-      addedAt: now + 20,
-      thumbnailDataUrl: auditPdf.thumb,
-      rawBytes: auditPdf.bytes,
-      width: 595,
-      height: 842,
-    },
-    {
-      id: `batch-pdf-7-${now}`,
-      name: '07_ISO_Compliance_Certificates.pdf',
-      sizeBytes: compliancePdf.bytes.byteLength,
-      mimeType: 'application/pdf',
-      category: 'pdf',
-      extension: 'PDF',
-      pageCount: 6,
-      pageRange: 'all',
-      rotation: 0,
-      fitMode: 'contain',
-      addedAt: now + 30,
-      thumbnailDataUrl: compliancePdf.thumb,
-      rawBytes: compliancePdf.bytes,
-      width: 595,
-      height: 842,
-    },
-    {
-      id: `batch-jpg-8-${now}`,
-      name: '08_Sector_B_Cleanroom_Layout.jpg',
-      sizeBytes: floorplan.bytes.byteLength,
-      mimeType: 'image/jpeg',
-      category: 'image',
-      extension: 'JPG',
-      pageCount: 1,
-      pageRange: 'all',
-      rotation: 0,
-      fitMode: 'contain',
-      addedAt: now + 40,
-      thumbnailDataUrl: floorplan.dataUrl,
-      rawBytes: floorplan.bytes,
-      width: floorplan.width,
-      height: floorplan.height,
-    },
-    {
-      id: `batch-png-9-${now}`,
-      name: '09_Customs_Clearance_Voucher.png',
-      sizeBytes: invoice.bytes.byteLength,
-      mimeType: 'image/png',
-      category: 'image',
-      extension: 'PNG',
-      pageCount: 1,
-      pageRange: 'all',
-      rotation: 0,
-      fitMode: 'contain',
-      addedAt: now + 50,
-      thumbnailDataUrl: invoice.dataUrl,
-      rawBytes: invoice.bytes,
-      width: invoice.width,
-      height: invoice.height,
-    },
-    {
-      id: `batch-pdf-10-${now}`,
-      name: '10_Vendor_Procurement_Addendum.pdf',
-      sizeBytes: addendumPdf.bytes.byteLength,
-      mimeType: 'application/pdf',
-      category: 'pdf',
-      extension: 'PDF',
-      pageCount: 3,
-      pageRange: 'all',
-      rotation: 0,
-      fitMode: 'contain',
-      addedAt: now + 60,
-      thumbnailDataUrl: addendumPdf.thumb,
-      rawBytes: addendumPdf.bytes,
-      width: 595,
-      height: 842,
-    },
-    createCustomTextDocumentItem(
-      '11_Deployment_Signoff_Checklist.md',
-      '# Deployment Sign-Off Checklist\nAll 12 project files verified for unified compilation.\n\n## Verification Matrix\n- Hardware telemetry: Nominal\n- Optical calibration: Verified\n- Customs & freight: Cleared'
-    ),
-    createCustomTextDocumentItem(
-      '12_Final_Release_Manifest.md',
-      '# Final Release Manifest\nThis package combines 12 distinct multi-format files (PDFs, JPEGs, PNGs, and Markdown notes) with unlimited pages per file into a single unified deliverable.'
-    ),
-  ];
+    const floorplan = generateSampleFloorplanJpeg();
+    const invoice = generateSampleInvoicePng();
 
-  return [...baseFour, ...extraItems];
+    const extraItems: MergeFileItem[] = [
+      {
+        id: `batch-pdf-5-${now}`,
+        name: '05_System_Architecture_Spec.pdf',
+        sizeBytes: specPdf.bytes.byteLength,
+        mimeType: 'application/pdf',
+        category: 'pdf',
+        extension: 'PDF',
+        pageCount: 5,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 10,
+        thumbnailDataUrl: specPdf.thumb,
+        rawBytes: specPdf.bytes,
+        width: 595,
+        height: 842,
+      },
+      {
+        id: `batch-pdf-6-${now}`,
+        name: '06_Quarterly_Security_Audit.pdf',
+        sizeBytes: auditPdf.bytes.byteLength,
+        mimeType: 'application/pdf',
+        category: 'pdf',
+        extension: 'PDF',
+        pageCount: 4,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 20,
+        thumbnailDataUrl: auditPdf.thumb,
+        rawBytes: auditPdf.bytes,
+        width: 595,
+        height: 842,
+      },
+      {
+        id: `batch-pdf-7-${now}`,
+        name: '07_ISO_Compliance_Certificates.pdf',
+        sizeBytes: compliancePdf.bytes.byteLength,
+        mimeType: 'application/pdf',
+        category: 'pdf',
+        extension: 'PDF',
+        pageCount: 6,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 30,
+        thumbnailDataUrl: compliancePdf.thumb,
+        rawBytes: compliancePdf.bytes,
+        width: 595,
+        height: 842,
+      },
+      {
+        id: `batch-jpg-8-${now}`,
+        name: '08_Sector_B_Cleanroom_Layout.jpg',
+        sizeBytes: floorplan.bytes.byteLength,
+        mimeType: 'image/jpeg',
+        category: 'image',
+        extension: 'JPG',
+        pageCount: 1,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 40,
+        thumbnailDataUrl: floorplan.dataUrl,
+        rawBytes: floorplan.bytes,
+        width: floorplan.width,
+        height: floorplan.height,
+      },
+      {
+        id: `batch-png-9-${now}`,
+        name: '09_Customs_Clearance_Voucher.png',
+        sizeBytes: invoice.bytes.byteLength,
+        mimeType: 'image/png',
+        category: 'image',
+        extension: 'PNG',
+        pageCount: 1,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 50,
+        thumbnailDataUrl: invoice.dataUrl,
+        rawBytes: invoice.bytes,
+        width: invoice.width,
+        height: invoice.height,
+      },
+      {
+        id: `batch-pdf-10-${now}`,
+        name: '10_Vendor_Procurement_Addendum.pdf',
+        sizeBytes: addendumPdf.bytes.byteLength,
+        mimeType: 'application/pdf',
+        category: 'pdf',
+        extension: 'PDF',
+        pageCount: 3,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 60,
+        thumbnailDataUrl: addendumPdf.thumb,
+        rawBytes: addendumPdf.bytes,
+        width: 595,
+        height: 842,
+      },
+      createCustomTextDocumentItem(
+        '11_Deployment_Signoff_Checklist.md',
+        '# Deployment Sign-Off Checklist\nAll project files verified for unified compilation.\n\n## Verification Matrix\n- Hardware telemetry: Nominal\n- Optical calibration: Verified\n- Customs & freight: Cleared'
+      ),
+      createCustomTextDocumentItem(
+        '12_Final_Release_Manifest.md',
+        '# Final Release Manifest\nThis package combines distinct multi-format files (PDFs, JPEGs, PNGs, and Markdown notes) with unlimited pages per file into a single unified deliverable.'
+      ),
+      {
+        id: `batch-pdf-13-${now}`,
+        name: '13_Structural_Load_Analysis.pdf',
+        sizeBytes: structuralPdf.bytes.byteLength,
+        mimeType: 'application/pdf',
+        category: 'pdf',
+        extension: 'PDF',
+        pageCount: 7,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 90,
+        thumbnailDataUrl: structuralPdf.thumb,
+        rawBytes: structuralPdf.bytes,
+        width: 595,
+        height: 842,
+      },
+      {
+        id: `batch-png-14-${now}`,
+        name: '14_Equipment_Calibration_Receipt.png',
+        sizeBytes: invoice.bytes.byteLength,
+        mimeType: 'image/png',
+        category: 'image',
+        extension: 'PNG',
+        pageCount: 1,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 100,
+        thumbnailDataUrl: invoice.dataUrl,
+        rawBytes: invoice.bytes,
+        width: invoice.width,
+        height: invoice.height,
+      },
+      {
+        id: `batch-pdf-15-${now}`,
+        name: '15_Environmental_Compliance_Packet.pdf',
+        sizeBytes: environmentalPdf.bytes.byteLength,
+        mimeType: 'application/pdf',
+        category: 'pdf',
+        extension: 'PDF',
+        pageCount: 5,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 110,
+        thumbnailDataUrl: environmentalPdf.thumb,
+        rawBytes: environmentalPdf.bytes,
+        width: 595,
+        height: 842,
+      },
+      {
+        id: `batch-jpg-16-${now}`,
+        name: '16_North_Wing_Grid_Elevation.jpg',
+        sizeBytes: floorplan.bytes.byteLength,
+        mimeType: 'image/jpeg',
+        category: 'image',
+        extension: 'JPG',
+        pageCount: 1,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 120,
+        thumbnailDataUrl: floorplan.dataUrl,
+        rawBytes: floorplan.bytes,
+        width: floorplan.width,
+        height: floorplan.height,
+      },
+      createCustomTextDocumentItem(
+        '17_Network_Routing_Notes.md',
+        '# Network Routing & Subnets\nPrimary opticaluplink and redundant failover paths verified across all 20 document nodes.'
+      ),
+      {
+        id: `batch-pdf-18-${now}`,
+        name: '18_Hardware_Bill_Of_Materials.pdf',
+        sizeBytes: bomPdf.bytes.byteLength,
+        mimeType: 'application/pdf',
+        category: 'pdf',
+        extension: 'PDF',
+        pageCount: 4,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 140,
+        thumbnailDataUrl: bomPdf.thumb,
+        rawBytes: bomPdf.bytes,
+        width: 595,
+        height: 842,
+      },
+      {
+        id: `batch-png-19-${now}`,
+        name: '19_Logistics_Dispatch_Voucher.png',
+        sizeBytes: invoice.bytes.byteLength,
+        mimeType: 'image/png',
+        category: 'image',
+        extension: 'PNG',
+        pageCount: 1,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 150,
+        thumbnailDataUrl: invoice.dataUrl,
+        rawBytes: invoice.bytes,
+        width: invoice.width,
+        height: invoice.height,
+      },
+      {
+        id: `batch-pdf-20-${now}`,
+        name: '20_Executive_Board_Signoff_Packet.pdf',
+        sizeBytes: boardPdf.bytes.byteLength,
+        mimeType: 'application/pdf',
+        category: 'pdf',
+        extension: 'PDF',
+        pageCount: 8,
+        pageRange: 'all',
+        rotation: 0,
+        fitMode: 'contain',
+        addedAt: now + 160,
+        thumbnailDataUrl: boardPdf.thumb,
+        rawBytes: boardPdf.bytes,
+        width: 595,
+        height: 842,
+      },
+    ];
+
+    const firstTwenty = [...baseFour, ...extraItems];
+
+    const extendedNames: { name: string; sourceIdx: number }[] = [
+      { name: '21_Thermal_Dissipation_Report.pdf', sourceIdx: 4 },
+      { name: '22_Cleanroom_Airflow_Diagram.jpg', sourceIdx: 1 },
+      { name: '23_Optical_Sensor_Calibration_Cert.pdf', sourceIdx: 6 },
+      { name: '24_Supplier_Freight_Manifest.png', sourceIdx: 2 },
+      { name: '25_Site_Handover_Addendum_B.md', sourceIdx: 3 },
+      { name: '26_Power_Grid_Redundancy_Spec.pdf', sourceIdx: 8 },
+      { name: '27_Seismic_Bracing_Blueprint.jpg', sourceIdx: 1 },
+      { name: '28_Customs_Duty_Clearance_1049.png', sourceIdx: 2 },
+      { name: '29_Quarterly_Compliance_Review.pdf', sourceIdx: 5 },
+      { name: '30_Firmware_Checksum_Log.md', sourceIdx: 10 },
+      { name: '31_Substation_Load_Schedule.pdf', sourceIdx: 9 },
+      { name: '32_West_Wing_Piping_Isometric.jpg', sourceIdx: 1 },
+      { name: '33_Vendor_SLA_Schedule_C.pdf', sourceIdx: 0 },
+      { name: '34_Warehouse_Dispatch_Receipt.png', sourceIdx: 2 },
+      { name: '35_Commissioning_Signoff_Notes.md', sourceIdx: 11 },
+      { name: '36_Cryogenic_Cooling_Validation.pdf', sourceIdx: 12 },
+      { name: '37_Laser_Interferometer_Plot.png', sourceIdx: 2 },
+      { name: '38_Structural_Foundation_Core.pdf', sourceIdx: 8 },
+      { name: '39_Cleanroom_Particle_Count.md', sourceIdx: 16 },
+      { name: '40_Executive_Steering_Summary.pdf', sourceIdx: 19 },
+      { name: '41_High_Voltage_Switchgear_Spec.pdf', sourceIdx: 4 },
+      { name: '42_South_Elevation_Section.jpg', sourceIdx: 1 },
+      { name: '43_Carrier_Insurance_Certificate.png', sourceIdx: 2 },
+      { name: '44_Disaster_Recovery_Runbook.md', sourceIdx: 3 },
+      { name: '45_Acoustic_Vibration_Analysis.pdf', sourceIdx: 6 },
+      { name: '46_Rack_Elevation_Layout_RevD.jpg', sourceIdx: 1 },
+      { name: '47_Final_Hardware_BOM_Rev2.pdf', sourceIdx: 17 },
+      { name: '48_Quality_Assurance_Voucher.png', sourceIdx: 2 },
+      { name: '49_Security_Access_Matrix.md', sourceIdx: 10 },
+      { name: '50_Master_Archive_Final_Signoff.pdf', sourceIdx: 19 },
+    ];
+
+    const items21To50: MergeFileItem[] = extendedNames.map((entry, idx) => {
+      const template = firstTwenty[entry.sourceIdx] || firstTwenty[0];
+      const num = 21 + idx;
+      return {
+        ...template,
+        id: `batch-ext-${num}-${now}`,
+        name: entry.name,
+        addedAt: now + 200 + idx * 10,
+      };
+    });
+
+    cachedBatchPool50 = [...firstTwenty, ...items21To50];
+  }
+
+  return cachedBatchPool50.slice(0, safeCount).map((item, idx) => ({
+    ...item,
+    id: `${item.id}-b${idx + 1}`,
+  }));
 }
 
 function loadImageElement(src: string): Promise<HTMLImageElement> {
@@ -978,18 +1179,19 @@ export async function renderCompositePreviewPages(
 
     ctx.fillStyle = '#0F172A';
     ctx.font = 'bold 12px "JetBrains Mono", monospace';
-    ctx.fillText('INDEXED CONTENTS (UP TO 20 FILES · UNLIMITED PAGES)', 48, 134);
+    ctx.fillText('INDEXED CONTENTS (UP TO 50 FILES · UNLIMITED PAGES)', 48, 134);
 
     let y = 162;
-    const rowStep = items.length > 12 ? 28 : 32;
+    const rowStep = items.length > 25 ? 13 : items.length > 12 ? 22 : 30;
     items.forEach((item, idx) => {
+      if (y > canvas.height - 28) return;
       const selectedPages = parsePageRange(item.pageRange, item.pageCount);
       ctx.fillStyle = '#0F172A';
-      ctx.font = '600 12px "Plus Jakarta Sans", sans-serif';
+      ctx.font = items.length > 25 ? '600 10px "Plus Jakarta Sans", sans-serif' : '600 12px "Plus Jakarta Sans", sans-serif';
       ctx.fillText(`${String(idx + 1).padStart(2, '0')}. ${item.name.slice(0, 38)}`, 48, y);
 
       ctx.fillStyle = '#64748B';
-      ctx.font = '11px "JetBrains Mono", monospace';
+      ctx.font = items.length > 25 ? '10px "JetBrains Mono", monospace' : '11px "JetBrains Mono", monospace';
       ctx.fillText(
         `${item.extension} · ${selectedPages.length}p · ${formatFileSize(item.sizeBytes)}`,
         canvas.width - 210,
