@@ -135,15 +135,15 @@ export const SettingsAndPreviewPanel: React.FC<SettingsAndPreviewPanelProps> = (
             htmlFor="output-filename-input"
             className="block text-[11px] font-semibold text-zinc-700 mb-1"
           >
-            Output Filename
+            Final Document Name
           </label>
           <input
             id="output-filename-input"
             type="text"
             value={settings.outputFilename}
             onChange={(e) => onUpdateSettings({ outputFilename: e.target.value })}
-            placeholder="unified-document-package"
-            className="w-full px-2.5 py-1 text-xs font-mono bg-white border border-zinc-300 rounded text-zinc-900 focus:outline-none focus:border-zinc-900 transition-colors"
+            placeholder="Complete Merged Binder"
+            className="w-full px-2.5 py-1.5 text-xs font-medium bg-white border border-zinc-300 rounded text-zinc-900 focus:outline-none focus:border-zinc-900 transition-colors"
           />
         </div>
       </div>

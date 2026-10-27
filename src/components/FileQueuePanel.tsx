@@ -175,21 +175,21 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
       />
 
       {/* Compact Desktop Queue Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-zinc-50 border-b border-zinc-200 rounded-t-lg">
+      <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5 bg-zinc-50/90 border-b border-zinc-200 rounded-t-lg">
         <div className="flex items-center gap-2.5">
           <ThemeIcon themeId={activeThemeId} role="queue" className="w-5 h-5 shrink-0" />
           <div>
-            <h1 className="text-sm font-bold text-zinc-900 balance-text leading-tight">
+            <h1 className="text-[14px] font-bold text-zinc-900 balance-text leading-tight">
               Source Document & Image Queue
             </h1>
-            <p className="text-[11px] text-zinc-500 mt-0.5 font-mono tabular-nums">
-              <span className="font-semibold text-zinc-800">
-                {items.length} / {MAX_QUEUE_FILES} files
+            <p className="text-xs text-zinc-500 mt-0.5 tabular-nums">
+              <span className="font-bold text-zinc-800">
+                {items.length} of {MAX_QUEUE_FILES} files queued
               </span>
-              <span className="mx-1.5" aria-hidden="true">·</span>
-              <span className="font-sans">Unlimited pages per file</span>
-              <span className="mx-1.5" aria-hidden="true">·</span>
-              <span className="font-sans">Drag rows to reorder</span>
+              <span className="mx-1.5 text-zinc-300" aria-hidden="true">·</span>
+              <span>Unlimited pages per file</span>
+              <span className="mx-1.5 text-zinc-300" aria-hidden="true">·</span>
+              <span>Drag rows to reorder</span>
             </p>
           </div>
         </div>
@@ -199,7 +199,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
             type="button"
             disabled={isAtMaxCapacity}
             onClick={() => fileInputRef.current?.click()}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-900 bg-white border border-zinc-300 rounded hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-40 transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-zinc-900 bg-white border border-zinc-300 rounded-md hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-40 transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed shadow-2xs"
           >
             <ThemeIcon themeId={activeThemeId} role="upload" className="w-3.5 h-3.5 shrink-0" />
             <span>{isAtMaxCapacity ? `Max ${MAX_QUEUE_FILES} Reached` : 'Add Files'}</span>
@@ -209,7 +209,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
             type="button"
             disabled={isAtMaxCapacity}
             onClick={onOpenNoteModal}
-            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-40 rounded transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-zinc-700 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] disabled:opacity-40 rounded-md transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer disabled:cursor-not-allowed shadow-2xs"
           >
             <ThemeIcon themeId={activeThemeId} role="note" className="w-3.5 h-3.5 shrink-0" />
             <span>Add Text Page</span>
@@ -219,11 +219,11 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
             type="button"
             onClick={handleBatchButtonClick}
             title={`Click to load/cycle batch size (4, 12, 20, 35, ${MAX_QUEUE_FILES}) or use - / + to count exact batch files (1–${MAX_QUEUE_FILES})`}
-            className="inline-flex items-center gap-1.5 px-2 py-1 text-xs font-medium text-zinc-800 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] rounded transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-zinc-800 bg-white border border-zinc-300 hover:bg-zinc-100 active:scale-[0.98] rounded-md transition-all duration-150 whitespace-nowrap shrink-0 cursor-pointer shadow-2xs"
           >
             <ThemeIcon themeId={activeThemeId} role="batch" className="w-3.5 h-3.5 shrink-0" />
             <span>Batch Files</span>
-            <span className="inline-flex items-center gap-1 ml-0.5 pl-1.5 border-l border-zinc-200 font-mono tabular-nums">
+            <span className="inline-flex items-center gap-1 ml-0.5 pl-1.5 border-l border-zinc-200 tabular-nums">
               <span
                 role="button"
                 tabIndex={0}
@@ -241,7 +241,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
               </span>
               <span
                 data-testid="batch-button-counter"
-                className="px-1 py-0.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xs"
+                className="px-1.5 py-0.5 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xs"
               >
                 {activeBatchCount}/{MAX_QUEUE_FILES}
               </span>
@@ -267,7 +267,7 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
             <button
               type="button"
               onClick={onClearAll}
-              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-700 hover:bg-red-50 rounded transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
+              className="inline-flex items-center gap-1 px-2.5 py-1.5 text-xs font-semibold text-red-700 hover:bg-red-50 rounded-md transition-colors duration-150 whitespace-nowrap shrink-0 cursor-pointer"
             >
               <Trash2 className="w-3.5 h-3.5" aria-hidden="true" />
               <span>Clear All</span>
@@ -277,9 +277,9 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
       </div>
 
       {/* Compact Filter & Search Toolbar */}
-      <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-2 bg-white border-b border-zinc-200">
-        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[220px]">
-          <div className="relative flex-1 max-w-xs">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 px-4 py-2.5 bg-white border-b border-zinc-200">
+        <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[260px]">
+          <div className="relative flex-1 max-w-sm">
             <Search
               className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
               aria-hidden="true"
@@ -288,9 +288,9 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
               type="search"
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Filter queue by filename or format..."
+              placeholder="Search files by name or format..."
               aria-label="Filter queue by filename or format"
-              className="w-full pl-8 pr-2.5 py-1 text-xs bg-zinc-50 border border-zinc-300 rounded text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:bg-white focus:border-zinc-900 transition-colors"
+              className="w-full pl-8 pr-2.5 py-1 text-xs font-medium bg-zinc-50 border border-zinc-300 rounded-md text-zinc-900 placeholder:text-zinc-400 focus:outline-none focus:bg-white focus:border-zinc-900 transition-colors"
             />
           </div>
 
@@ -561,26 +561,27 @@ export const FileQueuePanel: React.FC<FileQueuePanelProps> = ({
                     )}
 
                     {/* Zero-Pill Metadata Discipline: Clean unboxed text with middot separators */}
-                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-500 font-mono tabular-nums mt-0.5">
+                    <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-zinc-500 tabular-nums mt-0.5">
                       <span className="font-semibold text-zinc-700">{item.extension}</span>
                       <span aria-hidden="true">·</span>
                       <span>
-                        {activePages.length} of {item.pageCount} {item.pageCount === 1 ? 'page' : 'pages'}
+                        {activePages.length} of {item.pageCount}{' '}
+                        {item.pageCount === 1 ? 'page' : 'pages'}
                       </span>
                       <span aria-hidden="true">·</span>
                       <span>{formatFileSize(item.sizeBytes)}</span>
-                      {item.width && item.height && (
+                      {item.notes && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span>
-                            {item.width}×{item.height}
-                          </span>
+                          <span className="text-zinc-600">{item.notes}</span>
                         </>
                       )}
                       {item.rotation !== 0 && (
                         <>
                           <span aria-hidden="true">·</span>
-                          <span className="text-zinc-900 font-medium">Rotated {item.rotation}°</span>
+                          <span className="text-emerald-700 font-semibold">
+                            Turned {item.rotation}°
+                          </span>
                         </>
                       )}
                     </div>

@@ -66,7 +66,7 @@ export function renderStyledDocumentThumbnail(opts: {
   ctx.fillText(opts.title.slice(0, 32), 44, 64);
 
   ctx.fillStyle = '#64748B';
-  ctx.font = '12px "JetBrains Mono", monospace';
+  ctx.font = '600 12px "Plus Jakarta Sans", sans-serif';
   ctx.fillText(`${opts.badge} · ${opts.subtitle}`, 44, 88);
 
   // Content lines
@@ -96,9 +96,9 @@ export function renderStyledDocumentThumbnail(opts: {
 
   // Footer
   ctx.fillStyle = '#94A3B8';
-  ctx.font = '11px "JetBrains Mono", monospace';
+  ctx.font = '600 11px "Plus Jakarta Sans", sans-serif';
   ctx.fillText(
-    opts.pageCount && opts.pageCount > 1 ? `1 / ${opts.pageCount} PAGES` : '1 PAGE',
+    opts.pageCount && opts.pageCount > 1 ? `Page 1 of ${opts.pageCount}` : '1 Page',
     32,
     canvas.height - 22
   );
@@ -120,14 +120,14 @@ async function generateSamplePdfBytes(): Promise<{ bytes: Uint8Array; thumb: str
     height: 14,
     color: rgb(0.06, 0.09, 0.16),
   });
-  page1.drawText('MASTER SERVICE LEVEL AGREEMENT (SLA-2026)', {
+  page1.drawText('SERVICE LEVEL AGREEMENT (2026)', {
     x: 48,
     y: 775,
     size: 18,
     font: fontBold,
     color: rgb(0.06, 0.09, 0.16),
   });
-  page1.drawText('Document Ref: OMNI-SLA-094 · Effective Date: October 2026', {
+  page1.drawText('Reference: Service Contract · Effective Date: October 2026', {
     x: 48,
     y: 752,
     size: 10,
@@ -136,10 +136,10 @@ async function generateSamplePdfBytes(): Promise<{ bytes: Uint8Array; thumb: str
   });
 
   const sections = [
-    ['1. Scope of Infrastructure Operations', 'Provider guarantees 99.95% uptime across primary regional clusters with automated failover.'],
-    ['2. Incident Response Benchmarks', 'Priority-1 alerts receive engineering triage within 15 minutes of telemetry detection.'],
-    ['3. Data Integrity & Verification', 'Snapshots are cryptographically verified every 6 hours and retained for 90 calendar days.'],
-    ['4. Quarterly Audit Deliverables', 'Consolidated PDF compliance packets are issued at the close of each fiscal quarter.'],
+    ['1. Scope of Services', 'Provider guarantees 99.95% uptime across primary regional centers with automatic backup.'],
+    ['2. Support Response Times', 'Priority requests receive dedicated support response within 15 minutes.'],
+    ['3. Data Protection & Backups', 'Records are backed up every 6 hours and retained securely for 90 calendar days.'],
+    ['4. Quarterly Progress Reports', 'Consolidated PDF summary binders are delivered at the close of each quarter.'],
   ];
 
   let y = 700;
@@ -164,7 +164,7 @@ async function generateSamplePdfBytes(): Promise<{ bytes: Uint8Array; thumb: str
 
   // Page 2
   const page2 = pdfDoc.addPage([595.28, 841.89]);
-  page2.drawText('APPENDIX A · SIGNATORY & APPROVAL SCHEDULE', {
+  page2.drawText('APPENDIX A · APPROVAL & SIGNATURES', {
     x: 48,
     y: 775,
     size: 16,
@@ -178,14 +178,14 @@ async function generateSamplePdfBytes(): Promise<{ bytes: Uint8Array; thumb: str
     font: fontBold,
     color: rgb(0.06, 0.09, 0.16),
   });
-  page2.drawText('Elena Rostova — VP of Infrastructure Engineering', {
+  page2.drawText('Elena Rostova — Vice President of Operations', {
     x: 48,
     y: 705,
     size: 11,
     font: fontRegular,
     color: rgb(0.2, 0.25, 0.33),
   });
-  page2.drawText('Marcus Vance — Chief Compliance Officer', {
+  page2.drawText('Marcus Vance — Director of Compliance', {
     x: 48,
     y: 685,
     size: 11,
@@ -195,22 +195,22 @@ async function generateSamplePdfBytes(): Promise<{ bytes: Uint8Array; thumb: str
 
   const bytes = await pdfDoc.save();
   const thumb = renderStyledDocumentThumbnail({
-    title: 'Q4_Service_Agreement.pdf',
-    subtitle: '595 × 842 pt',
+    title: 'Service Agreement.pdf',
+    subtitle: 'Standard A4 Page',
     badge: 'PDF',
     accentColor: '#0F172A',
     lines: [
-      '# MASTER SERVICE LEVEL AGREEMENT',
-      'Ref: OMNI-SLA-094 · Effective Oct 2026',
+      '# SERVICE LEVEL AGREEMENT',
+      'Effective October 2026 · 2 Pages',
       '---',
-      '1. Scope of Infrastructure Operations',
-      '99.95% uptime across regional clusters.',
+      '1. Scope of Operations',
+      '99.95% uptime across regional centers.',
       '---',
-      '2. Incident Response Benchmarks',
-      'Priority-1 alerts triaged within 15m.',
+      '2. Support Response Benchmarks',
+      'Priority requests answered within 15m.',
       '---',
-      '3. Data Integrity & Verification',
-      'Cryptographic snapshots every 6 hours.',
+      '3. Data Protection & Backups',
+      'Verified backups every 6 hours.',
     ],
     pageCount: 2,
   });
@@ -268,24 +268,24 @@ function generateSampleFloorplanJpeg(): {
   // Labels
   ctx.fillStyle = '#0F172A';
   ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('SECTOR A · TURBINE ASSEMBLY BAY', 106, 130);
-  ctx.fillText('SECTOR B · METROLOGY CLEANROOM', 506, 130);
-  ctx.fillText('SECTOR C · LOGISTICS & STAGING CORRIDOR', 106, 410);
+  ctx.fillText('ZONE A · MAIN STUDIO HALL', 106, 130);
+  ctx.fillText('ZONE B · DESIGN & REVIEW LAB', 506, 130);
+  ctx.fillText('ZONE C · RECEPTION & CORRIDOR', 106, 410);
 
   ctx.fillStyle = '#475569';
-  ctx.font = '15px "JetBrains Mono", monospace';
-  ctx.fillText('14.2m × 9.8m · Clear Height 6.5m · Load 25 kN/m²', 106, 162);
-  ctx.fillText('ISO Class 6 · Temp 20.0°C ± 0.2°C · RH 45%', 506, 162);
-  ctx.fillText('Automated AGV Track · Dual Loading Bays · Scale 1:100', 106, 442);
+  ctx.font = '600 15px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('14.2m × 9.8m · Ceiling Height 6.5m · Ground Floor', 106, 162);
+  ctx.fillText('Climate Controlled · 20.0°C · Natural Skylight', 506, 162);
+  ctx.fillText('Main Visitor Entrance · Dual Elevators · Scale 1:100', 106, 442);
 
   // Title block at bottom right
   ctx.fillStyle = '#0F172A';
   ctx.fillRect(540, 555, 340, 60);
   ctx.fillStyle = '#FFFFFF';
-  ctx.font = 'bold 14px "JetBrains Mono", monospace';
-  ctx.fillText('DWG NO: FAC-2026-REVB · SHEET 01', 560, 582);
-  ctx.font = '12px "JetBrains Mono", monospace';
-  ctx.fillText('APPROVED FOR SITE PACKAGING', 560, 602);
+  ctx.font = 'bold 14px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('FLOORPLAN DRAWING · SHEET 01', 560, 582);
+  ctx.font = '12px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('APPROVED FOR CLIENT HANDOVER', 560, 602);
 
   const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
   return {
@@ -318,12 +318,12 @@ function generateSampleInvoicePng(): {
   // Header
   ctx.fillStyle = '#0F172A';
   ctx.font = 'bold 28px "Plus Jakarta Sans", sans-serif';
-  ctx.fillText('COMMERCIAL INVOICE', 60, 92);
+  ctx.fillText('PURCHASE RECEIPT', 60, 92);
 
   ctx.fillStyle = '#475569';
-  ctx.font = '14px "JetBrains Mono", monospace';
-  ctx.fillText('INVOICE #INV-2026-1048 · DATE: 2026-10-21', 60, 122);
-  ctx.fillText('VENDOR: NORDIC OPTICS GMBH · MUNICH', 60, 144);
+  ctx.font = '600 14px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('Receipt #1048 · Date: October 21, 2026', 60, 122);
+  ctx.fillText('Supplier: Nordic Optics Studio · Munich', 60, 144);
 
   // Divider
   ctx.strokeStyle = '#E2E8F0';
@@ -337,16 +337,16 @@ function generateSampleInvoicePng(): {
   ctx.fillStyle = '#F8FAFC';
   ctx.fillRect(60, 196, canvas.width - 120, 40);
   ctx.fillStyle = '#0F172A';
-  ctx.font = 'bold 13px "JetBrains Mono", monospace';
+  ctx.font = 'bold 13px "Plus Jakarta Sans", sans-serif';
   ctx.fillText('ITEM DESCRIPTION', 76, 221);
   ctx.fillText('QTY', 430, 221);
   ctx.fillText('AMOUNT (USD)', 520, 221);
 
   const rows = [
-    ['High-Precision Optical Sensor Array', '04', '$12,400.00'],
-    ['Anodized Mounting Rail Bracket Kit', '12', '$1,860.00'],
-    ['Factory Calibration & ISO Certificate', '01', '$950.00'],
-    ['Insured Air Freight & Customs Handling', '01', '$420.00'],
+    ['High-Resolution Optical Camera Kit', '04', '$12,400.00'],
+    ['Aluminum Studio Mounting Stand Set', '12', '$1,860.00'],
+    ['Factory Color Calibration Certificate', '01', '$950.00'],
+    ['Express Insured Doorstep Delivery', '01', '$420.00'],
   ];
 
   let y = 272;
@@ -354,7 +354,7 @@ function generateSampleInvoicePng(): {
   for (const [desc, qty, amt] of rows) {
     ctx.fillStyle = '#1E293B';
     ctx.fillText(desc, 76, y);
-    ctx.font = '14px "JetBrains Mono", monospace';
+    ctx.font = '600 14px "Plus Jakarta Sans", sans-serif';
     ctx.fillText(qty, 434, y);
     ctx.fillText(amt, 520, y);
     ctx.font = '14px "Plus Jakarta Sans", sans-serif';
@@ -368,12 +368,12 @@ function generateSampleInvoicePng(): {
   ctx.stroke();
 
   ctx.fillStyle = '#0F172A';
-  ctx.font = 'bold 20px "JetBrains Mono", monospace';
-  ctx.fillText('TOTAL DUE: $15,630.00', 385, y + 54);
+  ctx.font = 'bold 20px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('TOTAL PAID: $15,630.00', 385, y + 54);
 
   ctx.fillStyle = '#16A34A';
-  ctx.font = 'bold 14px "JetBrains Mono", monospace';
-  ctx.fillText('STATUS: PAID IN FULL · WIRE REF #883920', 60, y + 54);
+  ctx.font = 'bold 14px "Plus Jakarta Sans", sans-serif';
+  ctx.fillText('STATUS: PAID IN FULL · THANK YOU', 60, y + 54);
 
   const dataUrl = canvas.toDataURL('image/png');
   return {
@@ -390,36 +390,35 @@ export async function createSampleBundle(): Promise<MergeFileItem[]> {
   const floorplan = generateSampleFloorplanJpeg();
   const invoice = generateSampleInvoicePng();
 
-  const markdownNotes = [
-    '# Executive Release & Handover Summary',
-    'Prepared by: Systems Architecture Group',
-    'Package ID: PKG-2026-Q4',
+  const summaryNotes = [
+    '# Project Handover & Welcome Note',
+    'Prepared by: Studio Operations Team',
+    'Date: October 2026',
     '',
-    '## 1. Included Package Contents',
-    '- Q4 Service Level Agreement (2-page signed PDF)',
-    '- Sector A/B/C Facility Floorplan Revision B (High-res JPEG)',
-    '- Nordic Optics Commercial Invoice #1048 (Verified PNG)',
+    '## 1. Included Documents in This Binder',
+    '- Service Agreement (2-page signed PDF contract)',
+    '- Building Floorplan Drawing (High-resolution JPG photo)',
+    '- Equipment Purchase Receipt #1048 (Verified PNG receipt)',
     '',
-    '## 2. Verification Notes',
-    'All structural dimensions and optical sensor serial numbers have been',
-    'inspected against procurement order PO-99210. Ready for unified',
-    'archival export.',
+    '## 2. Quick Summary',
+    'All floorplan measurements and equipment receipts have been',
+    'checked and approved. Ready to combine into one PDF book.',
   ].join('\n');
 
-  const mdBytes = new TextEncoder().encode(markdownNotes);
-  const mdThumb = renderStyledDocumentThumbnail({
-    title: 'Handover_Summary_Notes.md',
-    subtitle: '13 lines · UTF-8',
-    badge: 'MD',
+  const noteBytes = new TextEncoder().encode(summaryNotes);
+  const noteThumb = renderStyledDocumentThumbnail({
+    title: 'Project Handover Note.txt',
+    subtitle: 'Text Note · 1 Page',
+    badge: 'TXT',
     accentColor: '#334155',
-    lines: markdownNotes.split('\n').filter(Boolean),
+    lines: summaryNotes.split('\n').filter(Boolean),
     pageCount: 1,
   });
 
   return [
     {
       id: 'sample-pdf-1',
-      name: 'Q4_Service_Agreement.pdf',
+      name: 'Service Agreement.pdf',
       sizeBytes: pdfSample.bytes.byteLength,
       mimeType: 'application/pdf',
       category: 'pdf',
@@ -433,11 +432,11 @@ export async function createSampleBundle(): Promise<MergeFileItem[]> {
       rawBytes: pdfSample.bytes,
       width: 595,
       height: 842,
-      notes: 'Primary legal contract (2 pages)',
+      notes: 'Primary service contract (2 pages)',
     },
     {
       id: 'sample-jpg-2',
-      name: 'Facility_Floorplan_RevB.jpg',
+      name: 'Building Floorplan.jpg',
       sizeBytes: floorplan.bytes.byteLength,
       mimeType: 'image/jpeg',
       category: 'image',
@@ -451,11 +450,11 @@ export async function createSampleBundle(): Promise<MergeFileItem[]> {
       rawBytes: floorplan.bytes,
       width: floorplan.width,
       height: floorplan.height,
-      notes: 'Architectural blueprint scan',
+      notes: 'Architectural floorplan photo',
     },
     {
       id: 'sample-png-3',
-      name: 'Equipment_Invoice_1048.png',
+      name: 'Equipment Receipt.png',
       sizeBytes: invoice.bytes.byteLength,
       mimeType: 'image/png',
       category: 'image',
@@ -469,26 +468,26 @@ export async function createSampleBundle(): Promise<MergeFileItem[]> {
       rawBytes: invoice.bytes,
       width: invoice.width,
       height: invoice.height,
-      notes: 'Paid vendor invoice receipt',
+      notes: 'Paid purchase receipt',
     },
     {
-      id: 'sample-md-4',
-      name: 'Handover_Summary_Notes.md',
-      sizeBytes: mdBytes.byteLength,
-      mimeType: 'text/markdown',
+      id: 'sample-txt-4',
+      name: 'Project Handover Note.txt',
+      sizeBytes: noteBytes.byteLength,
+      mimeType: 'text/plain',
       category: 'text',
-      extension: 'MD',
+      extension: 'TXT',
       pageCount: 1,
       pageRange: 'all',
       rotation: 0,
       fitMode: 'contain',
       addedAt: now,
-      thumbnailDataUrl: mdThumb,
-      rawBytes: mdBytes,
-      textContent: markdownNotes,
+      thumbnailDataUrl: noteThumb,
+      rawBytes: noteBytes,
+      textContent: summaryNotes,
       width: 595,
       height: 842,
-      notes: 'Cover release notes',
+      notes: 'Cover summary note',
     },
   ];
 }
@@ -511,14 +510,14 @@ async function generateMultiPagePdfDocument(
       height: 14,
       color: rgb(0.09, 0.09, 0.11),
     });
-    page.drawText(`${title.toUpperCase()} — SECTION ${p} OF ${numPages}`, {
+    page.drawText(`${title.toUpperCase()} — PAGE ${p} OF ${numPages}`, {
       x: 48,
       y: 775,
       size: 15,
       font: fontBold,
       color: rgb(0.09, 0.09, 0.11),
     });
-    page.drawText(`Document ID: ${docCode} · Sheet ${p}/${numPages} · Unlimited Multi-Page Stream`, {
+    page.drawText(`Reference: ${docCode} · Page ${p} of ${numPages} · Complete Document`, {
       x: 48,
       y: 752,
       size: 10,
@@ -528,7 +527,7 @@ async function generateMultiPagePdfDocument(
 
     let y = 705;
     for (let row = 1; row <= 6; row++) {
-      page.drawText(`${p}.${row} Verification Clause & Technical Specification Block`, {
+      page.drawText(`${p}.${row} Key Project Milestone & Review Summary`, {
         x: 48,
         y,
         size: 11,
@@ -537,7 +536,7 @@ async function generateMultiPagePdfDocument(
       });
       y -= 18;
       page.drawText(
-        `Verified telemetry and structural tolerances for subsystem module #${p}0${row} pass all ISO benchmarks.`,
+        `All quality checks and safety inspections for section #${p}0${row} are complete and verified.`,
         {
           x: 48,
           y,
@@ -553,18 +552,18 @@ async function generateMultiPagePdfDocument(
   const bytes = await pdfDoc.save();
   const thumb = renderStyledDocumentThumbnail({
     title,
-    subtitle: `${numPages} pages · 595 × 842 pt`,
+    subtitle: `${numPages} Pages · Standard A4`,
     badge: 'PDF',
     accentColor: '#18181B',
     lines: [
       `# ${title}`,
-      `Doc Ref: ${docCode} · ${numPages} Full Pages`,
+      `Reference: ${docCode} · ${numPages} Full Pages`,
       '---',
-      '1. Complete Multi-Page Vector Stream',
-      'All pages preserved with zero page cap.',
+      '1. Complete Multi-Page Document',
+      'All pages preserved with zero page limit.',
       '---',
-      '2. Lossless Page Extraction & Slicing',
-      'Supports custom ranges or full document.',
+      '2. Flexible Page Selection',
+      'Keep all pages or pick specific pages.',
     ],
     pageCount: numPages,
   });
@@ -576,7 +575,7 @@ let cachedBatchPool50: MergeFileItem[] | null = null;
 
 /**
  * Generates a countable multi-format batch (from 1 up to 50 files, default 12)
- * with multi-page PDFs (up to 8 pages each), JPEGs, PNGs, and Markdown notes.
+ * with multi-page PDFs (up to 8 pages each), JPEGs, PNGs, and text notes.
  * Caches the 50-file pool so stepping or counting the batch size is instantaneous.
  */
 export async function createExtendedSampleBatch(targetCount = 12): Promise<MergeFileItem[]> {
@@ -587,43 +586,43 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
     const now = Date.now();
 
     const specPdf = await generateMultiPagePdfDocument(
-      '05_System_Architecture_Spec.pdf',
-      'SPEC-2026-V5',
+      'System Design Guide.pdf',
+      'DOC-05',
       5
     );
     const auditPdf = await generateMultiPagePdfDocument(
-      '06_Quarterly_Security_Audit.pdf',
-      'AUD-2026-Q4',
+      'Quarterly Safety Review.pdf',
+      'DOC-06',
       4
     );
     const compliancePdf = await generateMultiPagePdfDocument(
-      '07_ISO_Compliance_Certificates.pdf',
-      'ISO-9001-CERT',
+      'Quality Certificates.pdf',
+      'DOC-07',
       6
     );
     const addendumPdf = await generateMultiPagePdfDocument(
-      '10_Vendor_Procurement_Addendum.pdf',
-      'PROC-ADD-08',
+      'Supplier Agreement Addendum.pdf',
+      'DOC-10',
       3
     );
     const structuralPdf = await generateMultiPagePdfDocument(
-      '13_Structural_Load_Analysis.pdf',
-      'STR-2026-13',
+      'Building Inspection Report.pdf',
+      'DOC-13',
       7
     );
     const environmentalPdf = await generateMultiPagePdfDocument(
-      '15_Environmental_Compliance_Packet.pdf',
-      'ENV-2026-15',
+      'Environmental Safety Packet.pdf',
+      'DOC-15',
       5
     );
     const bomPdf = await generateMultiPagePdfDocument(
-      '18_Hardware_Bill_Of_Materials.pdf',
-      'BOM-2026-18',
+      'Equipment Parts List.pdf',
+      'DOC-18',
       4
     );
     const boardPdf = await generateMultiPagePdfDocument(
-      '20_Executive_Board_Signoff_Packet.pdf',
-      'BRD-2026-20',
+      'Board Approval Packet.pdf',
+      'DOC-20',
       8
     );
 
@@ -633,7 +632,7 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
     const extraItems: MergeFileItem[] = [
       {
         id: `batch-pdf-5-${now}`,
-        name: '05_System_Architecture_Spec.pdf',
+        name: 'System Design Guide.pdf',
         sizeBytes: specPdf.bytes.byteLength,
         mimeType: 'application/pdf',
         category: 'pdf',
@@ -650,7 +649,7 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
       },
       {
         id: `batch-pdf-6-${now}`,
-        name: '06_Quarterly_Security_Audit.pdf',
+        name: 'Quarterly Safety Review.pdf',
         sizeBytes: auditPdf.bytes.byteLength,
         mimeType: 'application/pdf',
         category: 'pdf',
@@ -667,7 +666,7 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
       },
       {
         id: `batch-pdf-7-${now}`,
-        name: '07_ISO_Compliance_Certificates.pdf',
+        name: 'Quality Certificates.pdf',
         sizeBytes: compliancePdf.bytes.byteLength,
         mimeType: 'application/pdf',
         category: 'pdf',
@@ -684,7 +683,7 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
       },
       {
         id: `batch-jpg-8-${now}`,
-        name: '08_Sector_B_Cleanroom_Layout.jpg',
+        name: 'Studio Room Layout.jpg',
         sizeBytes: floorplan.bytes.byteLength,
         mimeType: 'image/jpeg',
         category: 'image',
@@ -701,7 +700,7 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
       },
       {
         id: `batch-png-9-${now}`,
-        name: '09_Customs_Clearance_Voucher.png',
+        name: 'Shipping Delivery Slip.png',
         sizeBytes: invoice.bytes.byteLength,
         mimeType: 'image/png',
         category: 'image',
@@ -718,7 +717,7 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
       },
       {
         id: `batch-pdf-10-${now}`,
-        name: '10_Vendor_Procurement_Addendum.pdf',
+        name: 'Supplier Agreement Addendum.pdf',
         sizeBytes: addendumPdf.bytes.byteLength,
         mimeType: 'application/pdf',
         category: 'pdf',
@@ -734,16 +733,16 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
         height: 842,
       },
       createCustomTextDocumentItem(
-        '11_Deployment_Signoff_Checklist.md',
-        '# Deployment Sign-Off Checklist\nAll project files verified for unified compilation.\n\n## Verification Matrix\n- Hardware telemetry: Nominal\n- Optical calibration: Verified\n- Customs & freight: Cleared'
+        'Launch Signoff Checklist.txt',
+        '# Launch Sign-Off Checklist\nAll project files have been reviewed and approved for final merging.\n\n## Completed Checks\n- Equipment setup: Approved\n- Camera calibration: Verified\n- Delivery receipts: Signed'
       ),
       createCustomTextDocumentItem(
-        '12_Final_Release_Manifest.md',
-        '# Final Release Manifest\nThis package combines distinct multi-format files (PDFs, JPEGs, PNGs, and Markdown notes) with unlimited pages per file into a single unified deliverable.'
+        'Final Package Summary.txt',
+        '# Final Package Summary\nThis binder combines PDF documents, floorplan photos, purchase receipts, and text notes with unlimited pages per file into one neat document.'
       ),
       {
         id: `batch-pdf-13-${now}`,
-        name: '13_Structural_Load_Analysis.pdf',
+        name: 'Building Inspection Report.pdf',
         sizeBytes: structuralPdf.bytes.byteLength,
         mimeType: 'application/pdf',
         category: 'pdf',
@@ -760,7 +759,7 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
       },
       {
         id: `batch-png-14-${now}`,
-        name: '14_Equipment_Calibration_Receipt.png',
+        name: 'Calibration Receipt.png',
         sizeBytes: invoice.bytes.byteLength,
         mimeType: 'image/png',
         category: 'image',
@@ -777,7 +776,7 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
       },
       {
         id: `batch-pdf-15-${now}`,
-        name: '15_Environmental_Compliance_Packet.pdf',
+        name: 'Environmental Safety Packet.pdf',
         sizeBytes: environmentalPdf.bytes.byteLength,
         mimeType: 'application/pdf',
         category: 'pdf',
@@ -794,7 +793,7 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
       },
       {
         id: `batch-jpg-16-${now}`,
-        name: '16_North_Wing_Grid_Elevation.jpg',
+        name: 'North Wing Elevation Photo.jpg',
         sizeBytes: floorplan.bytes.byteLength,
         mimeType: 'image/jpeg',
         category: 'image',
@@ -810,12 +809,12 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
         height: floorplan.height,
       },
       createCustomTextDocumentItem(
-        '17_Network_Routing_Notes.md',
-        '# Network Routing & Subnets\nPrimary opticaluplink and redundant failover paths verified across all 20 document nodes.'
+        'Team Meeting Notes.txt',
+        '# Team Meeting Notes\nAll department leads reviewed the 20-document package and confirmed page order.'
       ),
       {
         id: `batch-pdf-18-${now}`,
-        name: '18_Hardware_Bill_Of_Materials.pdf',
+        name: 'Equipment Parts List.pdf',
         sizeBytes: bomPdf.bytes.byteLength,
         mimeType: 'application/pdf',
         category: 'pdf',
@@ -832,7 +831,7 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
       },
       {
         id: `batch-png-19-${now}`,
-        name: '19_Logistics_Dispatch_Voucher.png',
+        name: 'Courier Dispatch Voucher.png',
         sizeBytes: invoice.bytes.byteLength,
         mimeType: 'image/png',
         category: 'image',
@@ -849,7 +848,7 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
       },
       {
         id: `batch-pdf-20-${now}`,
-        name: '20_Executive_Board_Signoff_Packet.pdf',
+        name: 'Board Approval Packet.pdf',
         sizeBytes: boardPdf.bytes.byteLength,
         mimeType: 'application/pdf',
         category: 'pdf',
@@ -869,36 +868,36 @@ export async function createExtendedSampleBatch(targetCount = 12): Promise<Merge
     const firstTwenty = [...baseFour, ...extraItems];
 
     const extendedNames: { name: string; sourceIdx: number }[] = [
-      { name: '21_Thermal_Dissipation_Report.pdf', sourceIdx: 4 },
-      { name: '22_Cleanroom_Airflow_Diagram.jpg', sourceIdx: 1 },
-      { name: '23_Optical_Sensor_Calibration_Cert.pdf', sourceIdx: 6 },
-      { name: '24_Supplier_Freight_Manifest.png', sourceIdx: 2 },
-      { name: '25_Site_Handover_Addendum_B.md', sourceIdx: 3 },
-      { name: '26_Power_Grid_Redundancy_Spec.pdf', sourceIdx: 8 },
-      { name: '27_Seismic_Bracing_Blueprint.jpg', sourceIdx: 1 },
-      { name: '28_Customs_Duty_Clearance_1049.png', sourceIdx: 2 },
-      { name: '29_Quarterly_Compliance_Review.pdf', sourceIdx: 5 },
-      { name: '30_Firmware_Checksum_Log.md', sourceIdx: 10 },
-      { name: '31_Substation_Load_Schedule.pdf', sourceIdx: 9 },
-      { name: '32_West_Wing_Piping_Isometric.jpg', sourceIdx: 1 },
-      { name: '33_Vendor_SLA_Schedule_C.pdf', sourceIdx: 0 },
-      { name: '34_Warehouse_Dispatch_Receipt.png', sourceIdx: 2 },
-      { name: '35_Commissioning_Signoff_Notes.md', sourceIdx: 11 },
-      { name: '36_Cryogenic_Cooling_Validation.pdf', sourceIdx: 12 },
-      { name: '37_Laser_Interferometer_Plot.png', sourceIdx: 2 },
-      { name: '38_Structural_Foundation_Core.pdf', sourceIdx: 8 },
-      { name: '39_Cleanroom_Particle_Count.md', sourceIdx: 16 },
-      { name: '40_Executive_Steering_Summary.pdf', sourceIdx: 19 },
-      { name: '41_High_Voltage_Switchgear_Spec.pdf', sourceIdx: 4 },
-      { name: '42_South_Elevation_Section.jpg', sourceIdx: 1 },
-      { name: '43_Carrier_Insurance_Certificate.png', sourceIdx: 2 },
-      { name: '44_Disaster_Recovery_Runbook.md', sourceIdx: 3 },
-      { name: '45_Acoustic_Vibration_Analysis.pdf', sourceIdx: 6 },
-      { name: '46_Rack_Elevation_Layout_RevD.jpg', sourceIdx: 1 },
-      { name: '47_Final_Hardware_BOM_Rev2.pdf', sourceIdx: 17 },
-      { name: '48_Quality_Assurance_Voucher.png', sourceIdx: 2 },
-      { name: '49_Security_Access_Matrix.md', sourceIdx: 10 },
-      { name: '50_Master_Archive_Final_Signoff.pdf', sourceIdx: 19 },
+      { name: 'Cooling System Report.pdf', sourceIdx: 4 },
+      { name: 'Airflow Diagram Photo.jpg', sourceIdx: 1 },
+      { name: 'Camera Sensor Certificate.pdf', sourceIdx: 6 },
+      { name: 'Freight Delivery Manifest.png', sourceIdx: 2 },
+      { name: 'Site Handover Addendum.txt', sourceIdx: 3 },
+      { name: 'Backup Power Guide.pdf', sourceIdx: 8 },
+      { name: 'Foundation Drawing.jpg', sourceIdx: 1 },
+      { name: 'Customs Receipt 1049.png', sourceIdx: 2 },
+      { name: 'Annual Quality Review.pdf', sourceIdx: 5 },
+      { name: 'Software Update Notes.txt', sourceIdx: 10 },
+      { name: 'Electrical Load Schedule.pdf', sourceIdx: 9 },
+      { name: 'West Wing Piping Plan.jpg', sourceIdx: 1 },
+      { name: 'Vendor Service Schedule.pdf', sourceIdx: 0 },
+      { name: 'Warehouse Receipt.png', sourceIdx: 2 },
+      { name: 'Final Inspection Notes.txt', sourceIdx: 11 },
+      { name: 'Climate Control Report.pdf', sourceIdx: 12 },
+      { name: 'Optical Alignment Chart.png', sourceIdx: 2 },
+      { name: 'Structural Core Report.pdf', sourceIdx: 8 },
+      { name: 'Cleanroom Air Quality Note.txt', sourceIdx: 16 },
+      { name: 'Executive Summary Report.pdf', sourceIdx: 19 },
+      { name: 'Switchgear Guide.pdf', sourceIdx: 4 },
+      { name: 'South Wing Elevation.jpg', sourceIdx: 1 },
+      { name: 'Shipping Insurance Slip.png', sourceIdx: 2 },
+      { name: 'Emergency Safety Guide.txt', sourceIdx: 3 },
+      { name: 'Vibration Test Analysis.pdf', sourceIdx: 6 },
+      { name: 'Server Rack Layout.jpg', sourceIdx: 1 },
+      { name: 'Revised Parts List.pdf', sourceIdx: 17 },
+      { name: 'Quality Approval Voucher.png', sourceIdx: 2 },
+      { name: 'Visitor Access Guide.txt', sourceIdx: 10 },
+      { name: 'Master Archive Signoff.pdf', sourceIdx: 19 },
     ];
 
     const items21To50: MergeFileItem[] = extendedNames.map((entry, idx) => {
@@ -1062,15 +1061,15 @@ export async function parseUploadedFile(file: File): Promise<MergeFileItem> {
 }
 
 export function createCustomTextDocumentItem(title: string, body: string): MergeFileItem {
-  const safeTitle = title.trim() || 'Untitled_Note.md';
-  const filename = safeTitle.includes('.') ? safeTitle : `${safeTitle}.md`;
+  const safeTitle = title.trim() || 'Custom Note Page.txt';
+  const filename = safeTitle.includes('.') ? safeTitle : `${safeTitle}.txt`;
   const rawBytes = new TextEncoder().encode(body);
   const lines = body.split(/\r?\n/);
   const pageCount = Math.max(1, Math.ceil(lines.length / 42));
   const thumb = renderStyledDocumentThumbnail({
     title: filename,
     subtitle: `${lines.length} lines · Custom Note`,
-    badge: 'MD',
+    badge: 'TXT',
     accentColor: '#334155',
     lines: lines.slice(0, 14),
     pageCount,
@@ -1080,9 +1079,9 @@ export function createCustomTextDocumentItem(title: string, body: string): Merge
     id: `note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
     name: filename,
     sizeBytes: rawBytes.byteLength,
-    mimeType: 'text/markdown',
+    mimeType: 'text/plain',
     category: 'text',
-    extension: 'MD',
+    extension: 'TXT',
     pageCount,
     pageRange: 'all',
     rotation: 0,
@@ -1148,7 +1147,7 @@ export async function renderCompositePreviewPages(
   const pageDims = calculatePageDimensions(settings.pageSize, settings.orientation);
   const marginPt = getMarginPoints(settings.margin);
 
-  // Optional Table of Contents Cover Page (supports up to 20 files cleanly)
+  // Optional Table of Contents Cover Page (supports up to 50 files cleanly)
   if (settings.includeTableOfContents) {
     const canvas = document.createElement('canvas');
     canvas.width = Math.round(pageDims.width);
@@ -1161,12 +1160,12 @@ export async function renderCompositePreviewPages(
     ctx.fillRect(0, 0, canvas.width, 12);
 
     ctx.font = 'bold 22px "Plus Jakarta Sans", sans-serif';
-    ctx.fillText(settings.documentTitle || 'Unified Document Package', 48, 68);
+    ctx.fillText(settings.documentTitle || 'Complete Merged Binder', 48, 68);
 
     ctx.fillStyle = '#64748B';
-    ctx.font = '11px "JetBrains Mono", monospace';
+    ctx.font = '600 11px "Plus Jakarta Sans", sans-serif';
     ctx.fillText(
-      `Author: ${settings.documentAuthor || 'OmniFuse'} · ${items.length} Combined Source Files`,
+      `Prepared by: ${settings.documentAuthor || 'OmniFuse Studio'} · ${items.length} Combined Files`,
       48,
       92
     );
@@ -1178,8 +1177,8 @@ export async function renderCompositePreviewPages(
     ctx.stroke();
 
     ctx.fillStyle = '#0F172A';
-    ctx.font = 'bold 12px "JetBrains Mono", monospace';
-    ctx.fillText('INDEXED CONTENTS (UP TO 50 FILES · UNLIMITED PAGES)', 48, 134);
+    ctx.font = 'bold 12px "Plus Jakarta Sans", sans-serif';
+    ctx.fillText('INCLUDED DOCUMENTS & PAGE INDEX', 48, 134);
 
     let y = 162;
     const rowStep = items.length > 25 ? 13 : items.length > 12 ? 22 : 30;
@@ -1191,9 +1190,9 @@ export async function renderCompositePreviewPages(
       ctx.fillText(`${String(idx + 1).padStart(2, '0')}. ${item.name.slice(0, 38)}`, 48, y);
 
       ctx.fillStyle = '#64748B';
-      ctx.font = items.length > 25 ? '10px "JetBrains Mono", monospace' : '11px "JetBrains Mono", monospace';
+      ctx.font = items.length > 25 ? '500 10px "Plus Jakarta Sans", sans-serif' : '500 11px "Plus Jakarta Sans", sans-serif';
       ctx.fillText(
-        `${item.extension} · ${selectedPages.length}p · ${formatFileSize(item.sizeBytes)}`,
+        `${item.extension} · ${selectedPages.length} ${selectedPages.length === 1 ? 'page' : 'pages'} · ${formatFileSize(item.sizeBytes)}`,
         canvas.width - 210,
         y
       );
@@ -1254,9 +1253,9 @@ export async function renderCompositePreviewPages(
 
       if (item.pageCount > 1) {
         ctx.fillStyle = '#475569';
-        ctx.font = '11px "JetBrains Mono", monospace';
+        ctx.font = '600 11px "Plus Jakarta Sans", sans-serif';
         ctx.fillText(
-          `${item.name} — Source Page ${pageNumberInSource} of ${item.pageCount}`,
+          `${item.name} — Page ${pageNumberInSource} of ${item.pageCount}`,
           marginPt,
           22
         );
@@ -1281,7 +1280,7 @@ export async function renderCompositePreviewPages(
       const ctx = canvas.getContext('2d')!;
       ctx.drawImage(img, 0, 0);
       ctx.fillStyle = '#64748B';
-      ctx.font = '11px "JetBrains Mono", monospace';
+      ctx.font = '600 11px "Plus Jakarta Sans", sans-serif';
       const label = `Page ${i + 1} of ${pages.length}`;
       const metrics = ctx.measureText(label);
       ctx.fillText(label, (canvas.width - metrics.width) / 2, canvas.height - 16);

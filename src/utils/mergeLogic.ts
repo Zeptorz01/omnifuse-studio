@@ -287,8 +287,8 @@ export function getStudioThemeById(themeId: StudioThemeId): StudioTheme {
 }
 
 export const DEFAULT_MERGE_SETTINGS: MergeSettings = {
-  outputFilename: 'unified-document-package',
-  documentTitle: 'Unified Document Package',
+  outputFilename: 'Complete Merged Binder',
+  documentTitle: 'Complete Merged Binder',
   documentAuthor: 'OmniFuse Studio',
   outputFormat: 'pdf',
   pageSize: 'a4',

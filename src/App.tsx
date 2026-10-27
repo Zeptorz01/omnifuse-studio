@@ -490,11 +490,16 @@ export default function App() {
       data-mode={preferences.darkMode ? 'dark' : 'light'}
       className="min-h-screen flex flex-col studio-canvas-bg text-zinc-900 transition-colors duration-200"
     >
-      {/* 3-Zone Top Bar with Corner Settings Button */}
+      {/* 3-Zone Top Bar with Visual Tutorial + Corner Settings Button */}
       <TopBar
         activeTab={activeTab}
         onSelectTab={setActiveTab}
         onTriggerMerge={handleExecuteMerge}
+        onOpenTutorial={() => {
+          setIsSettingsOpen(false);
+          setIsThemePopoverOpen(false);
+          setIsTutorialOpen(true);
+        }}
         onOpenSettings={() => {
           setIsTutorialOpen(false);
           setIsThemePopoverOpen(false);
@@ -507,39 +512,39 @@ export default function App() {
         fileCount={items.length}
       />
 
-      {/* Compact Desktop Summary Strip + Theme & Settings Controls */}
+      {/* Compact Desktop Summary Strip */}
       <div
         role="region"
         aria-label="Workspace Summary Metrics and Appearance Controls"
         className="bg-white border-b border-zinc-200 relative z-30"
       >
-        <div className="max-w-[1440px] mx-auto px-4 sm:px-5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-600 font-mono tabular-nums">
+        <div className="max-w-[1440px] mx-auto px-4 sm:px-5 py-2 flex flex-wrap items-center justify-between gap-2 text-xs text-zinc-600 tabular-nums">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="font-semibold text-zinc-900">
+            <span className="font-bold text-zinc-900">
               {metrics.totalFiles} / {MAX_QUEUE_FILES} Files
             </span>
-            <span aria-hidden="true">·</span>
-            <span>
-              {metrics.categoryCounts.pdf} PDF, {metrics.categoryCounts.image} IMG,{' '}
-              {metrics.categoryCounts.text} TXT
+            <span className="text-zinc-300" aria-hidden="true">·</span>
+            <span className="font-medium text-zinc-700">
+              {metrics.categoryCounts.pdf} PDF, {metrics.categoryCounts.image} Images,{' '}
+              {metrics.categoryCounts.text} Notes
             </span>
-            <span aria-hidden="true">·</span>
-            <span className="font-semibold text-zinc-900">
+            <span className="text-zinc-300" aria-hidden="true">·</span>
+            <span className="font-bold text-emerald-700">
               {settings.outputFormat === 'stitched-png' ||
               settings.outputFormat === 'stitched-jpeg'
                 ? '1 Continuous Strip'
                 : `${metrics.totalSelectedPages} Output Sheets (Unlimited Pages/File)`}
             </span>
-            <span aria-hidden="true">·</span>
-            <span>{formatFileSize(metrics.totalSizeBytes)}</span>
-            <span aria-hidden="true">·</span>
-            <span>
+            <span className="text-zinc-300" aria-hidden="true">·</span>
+            <span className="font-medium text-zinc-600">{formatFileSize(metrics.totalSizeBytes)}</span>
+            <span className="text-zinc-300" aria-hidden="true">·</span>
+            <span className="font-medium text-zinc-700">
               Target: {settings.outputFormat.toUpperCase()} ({settings.pageSize.toUpperCase()})
             </span>
           </div>
 
-          {/* Clean Status Readout (All Appearance, Theme & Guide Controls Consolidated in Corner Settings) */}
-          <span className="text-zinc-500 font-sans truncate max-w-md ml-auto hidden md:inline">
+          {/* Clean Status Readout */}
+          <span className="text-zinc-500 font-medium truncate max-w-md ml-auto hidden md:inline">
             {statusBanner || `Active Theme: ${activeTheme.name} · Ready to merge up to ${MAX_QUEUE_FILES} files`}
           </span>
         </div>

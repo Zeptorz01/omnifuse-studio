@@ -30,6 +30,12 @@ import {
 import { BrandIcon } from './BrandIcon';
 import { ThemeIcon } from './ThemeIcon';
 import {
+  ChapterVisualDiagram,
+  RatanInteractiveStoryboard,
+  RatanVisualOverviewBanner,
+  TutorialSticker,
+} from './TutorialVisuals';
+import {
   MAX_QUEUE_FILES,
   STUDIO_THEMES,
   WORKSPACE_PRESETS,
@@ -80,47 +86,47 @@ interface FormatSpec {
 const FORMAT_SPECS: FormatSpec[] = [
   {
     id: 'pdf',
-    ext: '.PDF',
-    category: 'Vector & Multi-Page Document',
-    title: 'Native PDF Stream Parser (pdf-lib)',
-    pipeline: 'Direct vector page extraction & lossless sheet embedding',
-    pageLimit: 'Unlimited pages per PDF file (1 to 500+ pages)',
-    resolution: 'Vector native (72–300 DPI preserved)',
+    ext: 'PDF Documents',
+    category: 'Multi-Page Contracts, Books & Reports',
+    title: 'Crisp Multi-Page PDF Reader & Merger',
+    pipeline: 'Keeps every page sharp and clear without losing text quality',
+    pageLimit: 'Unlimited pages per PDF (1 page to 500+ pages)',
+    resolution: 'Original sharp text & graphics preserved',
     details:
-      'Extracts every page (or your custom sliced range like "1-4, 7" or "odd") without rasterizing vector text, then stamps optional page numbers and watermarks.',
+      'Reads every page of your PDF (or just the exact pages you pick, like "1-3, 5" or "odd") and places them cleanly into your final combined book.',
   },
   {
     id: 'raster',
-    ext: '.JPG / .PNG / .WEBP',
-    category: 'High-Resolution Raster Scans & Photos',
-    title: 'Adaptive Aspect-Ratio Canvas Engine',
-    pipeline: 'EXIF-aware rotation + Fit/Fill/Original bounding box placement',
-    pageLimit: '1 sheet per image (up to 50 files per batch)',
-    resolution: 'Up to 4K source dimensions preserved',
+    ext: 'Photos (JPG / PNG)',
+    category: 'Camera Photos, Scans & Receipts',
+    title: 'Automatic Page Centering & Sideways Photo Fixer',
+    pipeline: 'Turns sideways photos upright & fits them neatly inside the page',
+    pageLimit: '1 full page per photo (up to 50 files at once)',
+    resolution: 'Full high-definition photo clarity',
     details:
-      'Automatically centers photos, receipts, and blueprints inside your target page margins using Contain (Fit Page), Cover (Fill Page), or 1:1 Original Ratio.',
+      'Automatically centers photos, receipts, and floorplans onto standard A4 or Letter pages using Fit Page, Fill Page, or Original Photo Size.',
   },
   {
     id: 'text',
-    ext: '.MD / .TXT / .LOG',
-    category: 'Formatted Notes & Documentation',
-    title: 'Automated Typesetting & Pagination Engine',
-    pipeline: 'Monospace & editorial line-wrapping across multi-page sheets',
-    pageLimit: 'Unlimited auto-paginated sheets',
-    resolution: 'Crisp vector typography',
+    ext: 'Text & Notes',
+    category: 'Written Notes, Checklists & Summaries',
+    title: 'Clean Document Page Formatter',
+    pipeline: 'Turns plain text notes into neat, easy-to-read document pages',
+    pageLimit: 'Unlimited pages (automatically wraps long notes)',
+    resolution: 'Clean, comfortable reading font',
     details:
-      'Converts Markdown notes, handover checklists, and logs into clean, bordered document pages—or lets you author new divider pages directly in the studio.',
+      'Turns text files and checklists into clean document pages—or lets you write a brand-new cover note directly inside the app.',
   },
   {
     id: 'data',
-    ext: '.CSV / .JSON / .SVG',
-    category: 'Structured Tables & Vector Diagrams',
-    title: 'Structured Data & Vector Sheet Renderer',
-    pipeline: 'Tabular grid alignment & scalable vector rasterization',
-    pageLimit: 'Unlimited rows / pages',
-    resolution: 'Lossless vector & tabular alignment',
+    ext: 'Tables & Drawings',
+    category: 'Spreadsheets & Diagrams (CSV / SVG)',
+    title: 'Clean Table & Diagram Formatter',
+    pipeline: 'Neatly aligns rows and drawings onto standard pages',
+    pageLimit: 'Unlimited rows and pages',
+    resolution: 'Sharp lines and aligned columns',
     details:
-      'Formats structured CSV rows, JSON payloads, and SVG schematics into readable technical sheets ready to bind alongside PDFs and images.',
+      'Formats spreadsheet tables and diagrams into clean, readable pages ready to combine alongside your PDFs and photos.',
   },
 ];
 
@@ -150,6 +156,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
 }) => {
   const [activeStepIndex, setActiveStepIndex] = useState(0);
   const [visitedSteps, setVisitedSteps] = useState<number[]>([0]);
+  const [showVisualStoryboard, setShowVisualStoryboard] = useState<boolean>(false);
 
   // Step 1 Interactive State: Format Inspector & Simulated Queue Counter
   const [selectedFormatId, setSelectedFormatId] = useState<string>('pdf');
@@ -159,7 +166,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
   const [demoRows, setDemoRows] = useState<DemoQueueRow[]>([
     {
       id: 'd1',
-      name: '01_Master_Service_Contract.pdf',
+      name: 'Service Agreement.pdf',
       ext: 'PDF',
       totalPages: 8,
       pageRange: '1-3, 5, 8',
@@ -168,7 +175,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
     },
     {
       id: 'd2',
-      name: '02_Cleanroom_Floorplan_RevC.jpg',
+      name: 'Building Floorplan.jpg',
       ext: 'JPG',
       totalPages: 1,
       pageRange: 'all',
@@ -177,7 +184,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
     },
     {
       id: 'd3',
-      name: '03_ISO_Audit_Addendum.pdf',
+      name: 'Safety Review Report.pdf',
       ext: 'PDF',
       totalPages: 6,
       pageRange: 'all',
@@ -198,7 +205,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
   // Step 4 Interactive State: Live Preview Inspector Replica (TOC, Page Numbers, Watermark)
   const [sandboxIncludeToc, setSandboxIncludeToc] = useState<boolean>(true);
   const [sandboxPageNumbers, setSandboxPageNumbers] = useState<boolean>(true);
-  const [sandboxWatermark, setSandboxWatermark] = useState<string>('CONFIDENTIAL AUDIT');
+  const [sandboxWatermark, setSandboxWatermark] = useState<string>('CONFIDENTIAL');
   const [sandboxSheetIdx, setSandboxSheetIdx] = useState<number>(0);
 
   // Step 5 Interactive State: Output Format & Preset Explorer
@@ -336,23 +343,23 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Native Studio Header Matching App TopBar */}
-        <div className="bg-zinc-100 border-b border-zinc-200 px-5 py-3 flex items-center justify-between gap-4">
+        <div className="bg-zinc-100 border-b border-zinc-200 px-5 py-3.5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-2.5 min-w-0">
             <BrandIcon className="w-6 h-6 shrink-0" />
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <h2
                   id="tutorial-modal-title"
-                  className="text-sm font-bold tracking-tight text-zinc-900 truncate"
+                  className="text-[15px] font-bold tracking-tight text-zinc-900 truncate"
                 >
-                  OmniFuse Studio — Interactive Operations & Mastery Guide
+                  OmniFuse Studio — Visual Workflow Guide & Interactive Tutorial
                 </h2>
-                <span className="font-mono text-[11px] font-semibold text-emerald-700 tabular-nums">
-                  · Chapter {activeStepIndex + 1} of {chapters.length} ({visitedSteps.length}/{chapters.length} Explored)
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full tabular-nums">
+                  Chapter {activeStepIndex + 1} of {chapters.length} · {visitedSteps.length}/{chapters.length} Explored
                 </span>
               </div>
-              <p className="text-xs text-zinc-600 truncate">
-                Hands-on interactive replicas of every studio control — click, type, reorder, slice pages, and test themes live
+              <p className="text-xs text-zinc-600 truncate mt-0.5">
+                Easy-to-understand visual diagrams, illustrated stickers, and live hands-on controls for every OmniFuse feature
               </p>
             </div>
           </div>
@@ -360,9 +367,24 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
           <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
-              onClick={() => goToStep(5)}
+              onClick={() => setShowVisualStoryboard((prev) => !prev)}
+              className={`inline-flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-md border transition-colors cursor-pointer ${
+                showVisualStoryboard
+                  ? 'studio-accent-btn border-transparent'
+                  : 'bg-white text-zinc-800 border-zinc-300 hover:bg-zinc-50'
+              }`}
+            >
+              <span>{showVisualStoryboard ? '6 Practice Chapters' : 'Picture & Sticker Guide'}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setShowVisualStoryboard(false);
+                goToStep(5);
+              }}
               title={`Jump to ${STUDIO_THEMES.length} Studio Themes & Dark Mode in Guide`}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-zinc-800 bg-white border border-zinc-300 rounded hover:bg-zinc-50 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-zinc-800 bg-white border border-zinc-300 rounded-md hover:bg-zinc-50 transition-colors cursor-pointer"
             >
               <ThemeIcon themeId={preferences.themeId} className="w-4 h-4 shrink-0" />
               <span className="hidden sm:inline">{STUDIO_THEMES.length} Themes</span>
@@ -372,7 +394,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               type="button"
               onClick={() => onUpdatePreferences({ darkMode: !preferences.darkMode })}
               title="Toggle Light / Dark Mode live"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-zinc-700 bg-white border border-zinc-300 rounded hover:bg-zinc-50 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-zinc-700 bg-white border border-zinc-300 rounded-md hover:bg-zinc-50 transition-colors cursor-pointer"
             >
               {preferences.darkMode ? (
                 <>
@@ -391,7 +413,7 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               type="button"
               onClick={onOpenSettings}
               title="Open Corner Studio Settings"
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-zinc-800 bg-white border border-zinc-300 rounded hover:bg-zinc-50 transition-colors cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold text-zinc-800 bg-white border border-zinc-300 rounded-md hover:bg-zinc-50 transition-colors cursor-pointer"
             >
               <Settings className="w-3.5 h-3.5 text-zinc-700" aria-hidden="true" />
               <span className="hidden md:inline">Settings</span>
@@ -415,6 +437,26 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             style={{ width: `${((activeStepIndex + 1) / chapters.length) * 100}%` }}
           />
         </div>
+
+        {/* Visual 3-Step Flowchart & Sticker Overview Banner */}
+        <RatanVisualOverviewBanner
+          activeStepIndex={activeStepIndex}
+          onSelectStep={(step) => {
+            setShowVisualStoryboard(false);
+            goToStep(step);
+          }}
+        />
+
+        {showVisualStoryboard && (
+          <div className="border-b border-zinc-200 bg-zinc-50/70 px-5 py-4 max-h-[42vh] overflow-y-auto">
+            <RatanInteractiveStoryboard
+              onSelectChapter={(step) => {
+                setShowVisualStoryboard(false);
+                goToStep(step);
+              }}
+            />
+          </div>
+        )}
 
         {/* Main 12-Column Studio Layout (Matches Workspace 4/8 Split) */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-y-auto bg-white">
@@ -512,18 +554,21 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             {activeStepIndex === 0 && (
               <div className="space-y-4">
                   <div>
-                    <div className="flex items-center gap-2 text-xs font-mono text-emerald-700 font-semibold">
-                      <span>CHAPTER 01</span>
+                    <div className="flex items-center gap-2 text-xs text-emerald-700 font-bold">
+                      <span>Chapter 01</span>
                       <span aria-hidden="true">·</span>
-                      <span>MULTI-FORMAT INGEST ENGINE</span>
+                      <span>Multi-Format Ingest & Smart Duplicate Guard</span>
                     </div>
                     <h3 className="text-base font-bold text-zinc-900 mt-1">
                       Combine Up to {MAX_QUEUE_FILES} Mixed Files into 1 Document — With Zero Page Limit Per File
                     </h3>
                     <p className="text-xs text-zinc-600 mt-1 leading-relaxed">
-                      OmniFuse Studio ingests PDFs, high-resolution images, and text documents in a single unified queue. You can load between 2 and {MAX_QUEUE_FILES} files at once, and each individual PDF or text file can contain unlimited pages.
+                      OmniFuse Studio ingests PDFs, high-resolution images, and text documents in a single unified queue. Load between 2 and {MAX_QUEUE_FILES} files at once with unlimited pages per file, protected by an automatic Duplicate File Detector.
                     </p>
                   </div>
+
+                  {/* Visual Flowchart & Stickers for Chapter 1 */}
+                  <ChapterVisualDiagram stepIndex={0} />
 
                   {/* Interactive Replica of App Queue Header & Capacity Meter */}
                   <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-3.5 space-y-3">
@@ -677,18 +722,21 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             {activeStepIndex === 1 && (
               <div className="space-y-4">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-mono text-emerald-700 font-semibold">
-                    <span>CHAPTER 02</span>
+                  <div className="flex items-center gap-2 text-xs text-emerald-700 font-bold">
+                    <span>Chapter 02</span>
                     <span aria-hidden="true">·</span>
-                    <span>INTERACTIVE QUEUE & PAGE SLICER LAB</span>
+                    <span>Interactive Queue & Visual Page Slicer Lab</span>
                   </div>
                   <h3 className="text-base font-bold text-zinc-900 mt-1">
                     Reorder Rows, Rename Files Inline, and Cherry-Pick Exact Page Ranges
                   </h3>
                   <p className="text-xs text-zinc-600 mt-1 leading-relaxed">
-                    Below is a live working replica of the studio queue. Try moving rows up/down, clicking the pencil icon to rename a file, or typing expressions like <code className="font-mono font-semibold text-zinc-900">1-3, 5</code>, <code className="font-mono font-semibold text-zinc-900">odd</code>, <code className="font-mono font-semibold text-zinc-900">even</code>, or <code className="font-mono font-semibold text-zinc-900">all</code>.
+                    Below is a visual diagram and a live working replica of the studio queue. Try moving rows up/down, clicking the pencil icon to rename a file, or typing page expressions like <code className="font-bold text-zinc-900 bg-zinc-100 px-1.5 py-0.5 rounded">1-3, 5</code>, <code className="font-bold text-zinc-900 bg-zinc-100 px-1.5 py-0.5 rounded">odd</code>, <code className="font-bold text-zinc-900 bg-zinc-100 px-1.5 py-0.5 rounded">even</code>, or <code className="font-bold text-zinc-900 bg-zinc-100 px-1.5 py-0.5 rounded">all</code>.
                   </p>
                 </div>
+
+                {/* Visual Diagram for Chapter 2 */}
+                <ChapterVisualDiagram stepIndex={1} />
 
                 {/* Live Interactive Queue Replica Matching FileQueuePanel */}
                 <div className="border border-zinc-200 rounded-lg overflow-hidden bg-white divide-y divide-zinc-200">
@@ -931,18 +979,21 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             {activeStepIndex === 2 && (
               <div className="space-y-4">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-mono text-emerald-700 font-semibold">
-                    <span>CHAPTER 03</span>
+                  <div className="flex items-center gap-2 text-xs text-emerald-700 font-bold">
+                    <span>Chapter 03</span>
                     <span aria-hidden="true">·</span>
-                    <span>GEOMETRY, SCALING & 90° SCAN ROTATION</span>
+                    <span>Geometry, Scaling & 90° Scan Rotation</span>
                   </div>
                   <h3 className="text-base font-bold text-zinc-900 mt-1">
                     Standardize Mixed Aspect Ratios, Fix Sideways Scans & Configure Margins
                   </h3>
                   <p className="text-xs text-zinc-600 mt-1 leading-relaxed">
-                    Use the controls below to test how OmniFuse maps images and scans onto your target PDF sheet. Press <kbd className="px-1 py-0.5 font-mono bg-zinc-100 border border-zinc-300 rounded">R</kbd> or click Rotate to spin the sheet in 90° increments.
+                    See the visual comparison diagram below, then use the live controls to test how OmniFuse maps images and scans onto your target PDF sheet. Press <kbd className="px-1.5 py-0.5 font-bold bg-zinc-100 border border-zinc-300 rounded">R</kbd> or click Rotate to spin the sheet in 90° increments.
                   </p>
                 </div>
+
+                {/* Visual Diagram for Chapter 3 */}
+                <ChapterVisualDiagram stepIndex={2} />
 
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center bg-zinc-50 border border-zinc-200 rounded-lg p-4">
                   {/* Live Proportioned Sheet Preview */}
@@ -1078,10 +1129,10 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             {activeStepIndex === 3 && (
               <div className="space-y-4">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-mono text-emerald-700 font-semibold">
-                    <span>CHAPTER 04</span>
+                  <div className="flex items-center gap-2 text-xs text-emerald-700 font-bold">
+                    <span>Chapter 04</span>
                     <span aria-hidden="true">·</span>
-                    <span>LIVE SHEET INSPECTOR, TABLE OF CONTENTS & WATERMARKS</span>
+                    <span>Live Sheet Inspector, Table of Contents & Watermarks</span>
                   </div>
                   <h3 className="text-base font-bold text-zinc-900 mt-1">
                     Preview Compiled Sheets, Prepend an Executive Cover Index & Stamp Watermarks
@@ -1090,6 +1141,9 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
                     Toggle the checkboxes and edit the watermark text below to see how the Live Preview Inspector renders your Table of Contents cover sheet, diagonal watermark, and page numbers in real time.
                   </p>
                 </div>
+
+                {/* Visual Diagram for Chapter 4 */}
+                <ChapterVisualDiagram stepIndex={3} />
 
                 <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 bg-zinc-50 border border-zinc-200 rounded-lg p-4 items-center">
                   {/* Simulated Compiled Sheet */}
@@ -1260,10 +1314,10 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
             {activeStepIndex === 4 && (
               <div className="space-y-4">
                 <div>
-                  <div className="flex items-center gap-2 text-xs font-mono text-emerald-700 font-semibold">
-                    <span>CHAPTER 05</span>
+                  <div className="flex items-center gap-2 text-xs text-emerald-700 font-bold">
+                    <span>Chapter 05</span>
                     <span aria-hidden="true">·</span>
-                    <span>UNIFIED COMPILATION & WORKFLOW PRESETS</span>
+                    <span>Unified Compilation & Workflow Presets</span>
                   </div>
                   <h3 className="text-base font-bold text-zinc-900 mt-1">
                     Export to Unified PDF, Stitched High-DPI Image Strip, or Indexed ZIP Archive
@@ -1272,6 +1326,9 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
                     Click any output format or preset profile below to inspect its packaging architecture, or apply it directly to your active studio workspace.
                   </p>
                 </div>
+
+                {/* Visual Diagram for Chapter 5 */}
+                <ChapterVisualDiagram stepIndex={4} />
 
                 {/* Interactive Format Selector */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -1375,21 +1432,21 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
               </div>
             )}
 
-            {/* CHAPTER 06: DARK MODE, 10 CUSTOM-ICON THEMES & STUDIO SHORTCUTS */}
+            {/* CHAPTER 06: DARK MODE, 11 CUSTOM-ICON THEMES & STUDIO SHORTCUTS */}
             {activeStepIndex === 5 && (
               <div className="space-y-4">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
-                    <div className="flex items-center gap-2 text-xs font-mono text-emerald-700 font-semibold">
-                      <span>CHAPTER 06</span>
+                    <div className="flex items-center gap-2 text-xs text-emerald-700 font-bold">
+                      <span>Chapter 06</span>
                       <span aria-hidden="true">·</span>
-                      <span>APPEARANCE ENGINE, DARK MODE & 10 ICONIC THEMES</span>
+                      <span>Appearance Engine, Dark Mode & {STUDIO_THEMES.length} Studio Themes</span>
                     </div>
                     <h3 className="text-base font-bold text-zinc-900 mt-1">
-                      Customize Your Studio with Dark Mode and 10 Custom-Icon Architectural Themes
+                      Customize Your Studio with Dark Mode and {STUDIO_THEMES.length} Custom-Icon Architectural Themes
                     </h3>
                     <p className="text-xs text-zinc-600 mt-1 leading-relaxed">
-                      Switch between Light and Dark Mode or click any of the 10 custom-icon studio themes below — both this How-to-Use guide and the entire OmniFuse workspace transform immediately.
+                      Switch between Light and Dark Mode or click any of the {STUDIO_THEMES.length} custom-icon studio themes below — both this guide and the entire OmniFuse workspace transform immediately.
                     </p>
                   </div>
 
@@ -1402,6 +1459,9 @@ export const TutorialModal: React.FC<TutorialModalProps> = ({
                     <span>Open Corner Settings</span>
                   </button>
                 </div>
+
+                {/* Visual Diagram for Chapter 6 */}
+                <ChapterVisualDiagram stepIndex={5} />
 
                 {/* Interactive Dark Mode Switcher */}
                 <div className="p-3 bg-zinc-50 border border-zinc-200 rounded-lg flex flex-wrap items-center justify-between gap-3">
